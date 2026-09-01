@@ -1,125 +1,127 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { Clock, Settings2, ShieldCheck, Users } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ReliabilityBadge } from "@/components/reliability-badge";
 import { useWorkspace } from "@/lib/workspace-store";
+import { LANGUAGE_LABELS, locations, type Language } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — TaskFlow" },
-      {
-        name: "description",
-        content:
-          "Configure your organization name, working hours and idle-time alerts in TaskFlow.",
-      },
-      { property: "og:title", content: "Settings — TaskFlow" },
-      { property: "og:description", content: "Organization, working hours and idle alerts." },
+      { title: "Settings — Agribridge" },
+      { name: "description", content: "Manage your Agribridge profile, language and location." },
     ],
   }),
   component: Settings,
 });
 
+const nonRegionLocations = locations.filter((l) => l.level !== "region");
+
 function Settings() {
-  const { members, tasks } = useWorkspace();
-  const [org, setOrg] = useState("TaskFlow Organization");
-  const [hours, setHours] = useState("40");
-  const [idleAlerts, setIdleAlerts] = useState(true);
-  const [autoReassign, setAutoReassign] = useState(false);
+  const { currentUser, updateProfile } = useWorkspace();
+  const [name, setName] = useState(currentUser.name);
+  const [language, setLanguage] = useState<Language>(currentUser.preferredLanguage);
+  const [locationId, setLocationId] = useState(currentUser.locationId);
+  const [nationalId, setNationalId] = useState(currentUser.nationalId ?? "");
 
   return (
-    <AppShell
-      allowedRoles={["admin", "principal"]}
-      title="Settings"
-      description="Organization-wide preferences for planning and alerts."
-    >
+    <AppShell title="Settings" description="Your Agribridge profile.">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Settings2} title="Organization" value={org} tone="brand" hint="Org name" />
         <StatCard
-          icon={Users}
-          title="Team size"
-          value={members.length}
-          tone="soft"
-          hint="Members"
-        />
-        <StatCard
-          icon={Clock}
-          title="Weekly hours"
-          value={`${hours}h`}
-          tone="success"
-          hint="Default capacity"
+          icon={ShieldCheck}
+          title="Reliability score"
+          value={`${currentUser.reliabilityScore}/100`}
+          tone="brand"
         />
         <StatCard
           icon={ShieldCheck}
-          title="Active tasks"
-          value={tasks.filter((t) => t.status !== "completed").length}
-          tone="warning"
-          hint="Across the team"
+          title="Verification"
+          value={currentUser.isVerified ? "Verified" : "Not verified"}
+          tone={currentUser.isVerified ? "success" : "warning"}
         />
       </div>
+
       <div className="surface-card max-w-2xl p-6">
-        <h2 className="text-sm font-semibold text-foreground">Organization</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Profile</h2>
+          <ReliabilityBadge score={currentUser.reliabilityScore} />
+        </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor="org">Name</Label>
-            <Input id="org" value={org} onChange={(e) => setOrg(e.target.value)} />
+            <Label htmlFor="name">Full name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="hours">Default weekly hours</Label>
-            <Input
-              id="hours"
-              type="number"
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
-            />
+            <Label>Phone number</Label>
+            <Input value={currentUser.phone} disabled />
+          </div>
+          <div className="grid gap-2">
+            <Label>Preferred language</Label>
+            <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(LANGUAGE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label>Location</Label>
+            <Select value={locationId} onValueChange={setLocationId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {nonRegionLocations.map((l) => (
+                  <SelectItem key={l.id} value={l.id}>
+                    {l.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         <Separator className="my-6" />
 
-        <h2 className="text-sm font-semibold text-foreground">Idle-time monitoring</h2>
-        <div className="mt-4 space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-foreground">Idle worker alerts</p>
-              <p className="text-xs text-muted-foreground">
-                Notify managers when someone has no task in progress.
-              </p>
-            </div>
-            <Switch checked={idleAlerts} onCheckedChange={setIdleAlerts} />
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-foreground">Suggest auto-reassignment</p>
-              <p className="text-xs text-muted-foreground">
-                Recommend backlog tasks for idle team members.
-              </p>
-            </div>
-            <Switch checked={autoReassign} onCheckedChange={setAutoReassign} />
-          </div>
+        <h2 className="text-sm font-semibold text-foreground">Verification</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Optional — adding your national ID unlocks the verified badge once an admin confirms it.
+        </p>
+        <div className="mt-4 grid gap-2 sm:max-w-xs">
+          <Label htmlFor="nationalId">National ID</Label>
+          <Input
+            id="nationalId"
+            value={nationalId}
+            onChange={(e) => setNationalId(e.target.value)}
+            placeholder="1 1990 8 0123456 0 12"
+          />
         </div>
 
         <div className="mt-6 flex gap-2">
           <Button
-            onClick={() => {
-              if (!org.trim()) {
-                toast.error("Organization name is required");
-                return;
-              }
-              toast.success("Settings saved", { description: "Your preferences were updated." });
-            }}
+            onClick={() =>
+              updateProfile({
+                name,
+                preferredLanguage: language,
+                locationId,
+                ...(nationalId ? { nationalId } : {}),
+              })
+            }
           >
             Save changes
-          </Button>
-          <Button variant="outline" onClick={() => toast.info("Changes discarded")}>
-            Reset
           </Button>
         </div>
       </div>
