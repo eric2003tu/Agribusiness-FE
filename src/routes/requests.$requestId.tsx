@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { RequestStatusBadge, ListingStatusBadge, AggregationStatusBadge } from "@/components/status-badge";
 import { ReliabilityBadge } from "@/components/reliability-badge";
+import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
 import { locationLabel, productById } from "@/lib/mock-data";
@@ -55,6 +56,15 @@ function RequestDetail() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="surface-card p-5">
+            <div className="mb-5 flex items-center gap-4">
+              <ProductIllustration productId={request.productId} className="size-16" />
+              <div>
+                <p className="text-sm font-medium text-foreground">{product?.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatQuantity(request.quantityNeeded, request.unit)} needed
+                </p>
+              </div>
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">Status</p>
               <RequestStatusBadge status={request.status} />

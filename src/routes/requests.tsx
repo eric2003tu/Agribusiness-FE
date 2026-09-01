@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
 import { RequestStatusBadge } from "@/components/status-badge";
+import { ProductIllustration } from "@/components/product-illustration";
 import { DataTable, type Column, type FilterConfig } from "@/components/data-table";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
@@ -31,7 +32,12 @@ function RequestsPage() {
     {
       key: "product",
       header: "Product",
-      render: (r) => productById(r.productId)?.name ?? "—",
+      render: (r) => (
+        <div className="flex items-center gap-3">
+          <ProductIllustration productId={r.productId} className="size-10" rounded="rounded-lg" />
+          <span className="font-medium text-foreground">{productById(r.productId)?.name ?? "—"}</span>
+        </div>
+      ),
       exportValue: (r) => productById(r.productId)?.name ?? "",
     },
     {

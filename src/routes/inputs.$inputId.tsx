@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/user-avatar";
 import { ReliabilityBadge } from "@/components/reliability-badge";
 import { GroupPurchaseStatusBadge } from "@/components/status-badge";
+import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
 import { locations, productById } from "@/lib/mock-data";
@@ -52,6 +53,9 @@ function InputDetail() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="surface-card p-5">
+            <div className="mb-5">
+              <ProductIllustration productId={listing.productId} className="h-32 w-32" />
+            </div>
             <dl className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <dt className="text-muted-foreground">Price</dt>

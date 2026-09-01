@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhotoUploader } from "@/components/photo-uploader";
+import { ProductIllustration } from "@/components/product-illustration";
 import { ListingStatusBadge, RequestStatusBadge } from "@/components/status-badge";
 import { ReliabilityBadge } from "@/components/reliability-badge";
 import { UserAvatar } from "@/components/user-avatar";
@@ -96,18 +97,20 @@ function ListingDetail() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="surface-card p-5">
-            {listing.photos && listing.photos.length > 0 && (
-              <div className="mb-5 flex gap-2 overflow-x-auto">
-                {listing.photos.map((src, i) => (
+            <div className="mb-5 flex gap-2 overflow-x-auto">
+              {listing.photos && listing.photos.length > 0 ? (
+                listing.photos.map((src, i) => (
                   <img
                     key={i}
                     src={src}
                     alt={`${product?.name ?? "Listing"} photo ${i + 1}`}
                     className="h-32 w-32 shrink-0 rounded-lg object-cover"
                   />
-                ))}
-              </div>
-            )}
+                ))
+              ) : (
+                <ProductIllustration productId={listing.productId} className="h-32 w-32" />
+              )}
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-muted-foreground">Quantity</p>

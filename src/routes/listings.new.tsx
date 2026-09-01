@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhotoUploader } from "@/components/photo-uploader";
+import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { locations, products, type ListingScope, type Unit } from "@/lib/mock-data";
 
@@ -62,20 +63,23 @@ function NewListingPage() {
           submit();
         }}
       >
-        <div className="grid gap-2">
-          <Label>Product</Label>
-          <Select value={productId} onValueChange={setProductId}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {produceProducts.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-end gap-3">
+          <ProductIllustration productId={productId} className="size-14" />
+          <div className="grid flex-1 gap-2">
+            <Label>Product</Label>
+            <Select value={productId} onValueChange={setProductId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {produceProducts.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -167,6 +171,9 @@ function NewListingPage() {
 
         <div className="grid gap-2">
           <Label>Photos (optional)</Label>
+          <p className="text-xs text-muted-foreground">
+            Buyers see a generic product picture until you add your own.
+          </p>
           <PhotoUploader photos={photos} onChange={setPhotos} />
         </div>
 

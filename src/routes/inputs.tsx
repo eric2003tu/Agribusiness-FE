@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
 import { DataTable, type Column, type FilterConfig } from "@/components/data-table";
 import { ReliabilityBadge } from "@/components/reliability-badge";
+import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
 import {
@@ -72,10 +73,13 @@ function InputsPage() {
       key: "product",
       header: "Input",
       render: (l) => (
-        <div className="min-w-0">
-          <p className="font-medium text-foreground">{productById(l.productId)?.name ?? "—"}</p>
-          <div className="mt-1">
-            <CategoryBadge input={l} />
+        <div className="flex items-center gap-3">
+          <ProductIllustration productId={l.productId} className="size-10" rounded="rounded-lg" />
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">{productById(l.productId)?.name ?? "—"}</p>
+            <div className="mt-1">
+              <CategoryBadge input={l} />
+            </div>
           </div>
         </div>
       ),
