@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AggregationRouteImport } from './routes/aggregation'
+import { Route as CooperativesRouteImport } from './routes/cooperatives'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GroupPurchasesRouteImport } from './routes/group-purchases'
 import { Route as InputsRouteImport } from './routes/inputs'
@@ -42,6 +43,11 @@ const IndexRoute = IndexRouteImport.update({
 const AggregationRoute = AggregationRouteImport.update({
   id: '/aggregation',
   path: '/aggregation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CooperativesRoute = CooperativesRouteImport.update({
+  id: '/cooperatives',
+  path: '/cooperatives',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -160,6 +166,7 @@ const UsersUserIdRoute = UsersUserIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
+  '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
   '/inputs': typeof InputsRouteWithChildren
@@ -186,6 +193,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
+  '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
   '/inputs': typeof InputsRouteWithChildren
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
+  '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
   '/inputs': typeof InputsRouteWithChildren
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aggregation'
+    | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
     | '/inputs'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/aggregation'
+    | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
     | '/inputs'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/aggregation'
+    | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
     | '/inputs'
@@ -320,6 +332,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AggregationRoute: typeof AggregationRouteWithChildren
+  CooperativesRoute: typeof CooperativesRoute
   DashboardRoute: typeof DashboardRoute
   GroupPurchasesRoute: typeof GroupPurchasesRouteWithChildren
   InputsRoute: typeof InputsRouteWithChildren
@@ -348,6 +361,13 @@ declare module '@tanstack/react-router' {
       path: '/aggregation'
       fullPath: '/aggregation'
       preLoaderRoute: typeof AggregationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cooperatives': {
+      id: '/cooperatives'
+      path: '/cooperatives'
+      fullPath: '/cooperatives'
+      preLoaderRoute: typeof CooperativesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -597,6 +617,7 @@ const UsersRouteWithChildren = UsersRoute._addFileChildren(UsersRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AggregationRoute: AggregationRouteWithChildren,
+  CooperativesRoute: CooperativesRoute,
   DashboardRoute: DashboardRoute,
   GroupPurchasesRoute: GroupPurchasesRouteWithChildren,
   InputsRoute: InputsRouteWithChildren,

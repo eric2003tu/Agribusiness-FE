@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { Boxes } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,12 @@ export const Route = createFileRoute("/group-purchases")({
 });
 
 function GroupPurchasesPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { groupPurchases, inputListings, pledgedQuantityFor } = useWorkspace();
+
+  if (pathname !== "/group-purchases") {
+    return <Outlet />;
+  }
 
   const columns: Column<GroupPurchase>[] = [
     {

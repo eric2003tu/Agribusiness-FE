@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { Sprout, ShoppingBasket, Package, Users as UsersIcon } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,12 @@ export const Route = createFileRoute("/users")({
 });
 
 function UsersPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { users, verifyUser, setUserSuspended } = useWorkspace();
+
+  if (pathname !== "/users") {
+    return <Outlet />;
+  }
 
   const columns: Column<User>[] = [
     { key: "name", header: "Name", render: (u) => u.name, exportValue: (u) => u.name },

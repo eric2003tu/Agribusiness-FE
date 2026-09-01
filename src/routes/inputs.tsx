@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { Package, Plus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,12 @@ export const Route = createFileRoute("/inputs")({
 });
 
 function InputsPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { inputListings, userById, can } = useWorkspace();
+
+  if (pathname !== "/inputs") {
+    return <Outlet />;
+  }
 
   const columns: Column<InputListing>[] = [
     {

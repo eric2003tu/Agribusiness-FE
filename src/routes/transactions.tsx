@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, ShoppingCart } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,12 @@ export const Route = createFileRoute("/transactions")({
 });
 
 function TransactionsPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { transactions, myTransactions, userById, can } = useWorkspace();
+
+  if (pathname !== "/transactions") {
+    return <Outlet />;
+  }
   const rows = can("moderate") ? transactions : myTransactions;
 
   const columns: Column<Transaction>[] = [

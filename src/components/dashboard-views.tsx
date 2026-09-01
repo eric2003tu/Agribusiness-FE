@@ -63,9 +63,10 @@ export function FarmerDashboard() {
         <StatCard icon={Sprout} title="Active listings" value={active.length} tone="brand" />
         <StatCard
           icon={Handshake}
-          title="Pending aggregation invites"
+          title="Aggregation invites"
           value={myPending.length}
           tone={myPending.length ? "warning" : "success"}
+          hint="Awaiting your response"
         />
         <StatCard
           icon={ShieldCheck}
@@ -251,7 +252,7 @@ export function SupplierDashboard() {
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Package} title="Active input listings" value={myInputListings.length} tone="brand" />
-        <StatCard icon={Boxes} title="Group purchases collecting" value={collecting.length} tone="soft" />
+        <StatCard icon={Boxes} title="Group purchases open" value={collecting.length} tone="soft" />
         <StatCard
           icon={ShoppingCart}
           title="Orders received"

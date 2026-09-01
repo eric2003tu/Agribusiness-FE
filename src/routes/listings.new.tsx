@@ -53,7 +53,7 @@ function NewListingPage() {
   return (
     <AppShell title="New produce listing" description="List your harvest for buyers and other farmers to find.">
       <form
-        className="surface-card mx-auto max-w-2xl space-y-5 p-6"
+        className="surface-card mx-auto space-y-5 p-6"
         onSubmit={(e) => {
           e.preventDefault();
           submit();

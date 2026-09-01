@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { Handshake } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,13 @@ export const Route = createFileRoute("/aggregation")({
 });
 
 function AggregationPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { currentUser, aggregationGroups, buyerRequests, participantsForGroup, groupsForUser, can } =
     useWorkspace();
+
+  if (pathname !== "/aggregation") {
+    return <Outlet />;
+  }
   const relevant = can("moderate") ? aggregationGroups : groupsForUser(currentUser.id);
 
   const columns: Column<AggregationGroup>[] = [

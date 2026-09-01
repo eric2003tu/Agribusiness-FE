@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { Plus, ShoppingBasket, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,12 @@ export const Route = createFileRoute("/requests")({
 });
 
 function RequestsPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { buyerRequests, userById, can } = useWorkspace();
+
+  if (pathname !== "/requests") {
+    return <Outlet />;
+  }
 
   const columns: Column<BuyerRequest>[] = [
     {
