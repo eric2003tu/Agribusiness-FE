@@ -5,9 +5,9 @@ import { useWorkspace } from "@/lib/workspace-store";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign in — TaskFlow" },
-      { name: "description", content: "Sign in to TaskFlow." },
-      { property: "og:title", content: "Sign in — TaskFlow" },
+      { title: "Sign in — Agribridge" },
+      { name: "description", content: "Sign in to Agribridge." },
+      { property: "og:title", content: "Sign in — Agribridge" },
     ],
   }),
   component: LoginRedirect,

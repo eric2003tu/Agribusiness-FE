@@ -1,29 +1,25 @@
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
-  Activity,
+  Boxes,
   CheckCircle2,
-  Clock,
-  ListTodo,
+  Handshake,
   Package,
-  PackageSearch,
-  Timer,
-  UserMinus,
+  ShieldCheck,
+  ShoppingBasket,
+  ShoppingCart,
+  Sprout,
   Users,
-  Wallet,
 } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
-import { PriorityBadge, StatusBadge } from "@/components/status-badge";
-import { UserAvatar } from "@/components/user-avatar";
-import { ActivityFeed } from "@/components/activity-feed";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { ListingStatusBadge, TransactionStatusBadge } from "@/components/status-badge";
+import { NotificationFeed } from "@/components/notification-feed";
 import { useWorkspace } from "@/lib/workspace-store";
-import type { Member, Task } from "@/lib/mock-data";
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { formatRwf, formatQuantity } from "@/lib/format";
+import { productById, locationLabel } from "@/lib/mock-data";
 
 function Panel({
   title,
@@ -33,8 +29,8 @@ function Panel({
 }: {
   title: string;
   subtitle?: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="surface-card">
@@ -50,304 +46,369 @@ function Panel({
   );
 }
 
-function TaskList({ rows, empty }: { rows: Task[]; empty: string }) {
-  const { memberById } = useWorkspace();
-  return (
-    <ul className="divide-y divide-border">
-      {rows.length === 0 && <li className="p-6 text-sm text-muted-foreground">{empty}</li>}
-      {rows.map((t) => (
-        <li key={t.id} className="flex flex-wrap items-center gap-3 p-4">
-          <UserAvatar member={memberById(t.assigneeId)} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">{t.title}</p>
-            <p className="text-xs text-muted-foreground">
-              {t.project} · due {t.dueDate}
-            </p>
-          </div>
-          <PriorityBadge priority={t.priority} />
-          <StatusBadge status={t.status} />
-        </li>
-      ))}
-    </ul>
-  );
-}
+/* --------------------------------- Farmer -------------------------------- */
 
-function loadFor(member: Member, tasks: Task[]) {
-  const open = tasks.filter((t) => t.assigneeId === member.id && t.status !== "completed");
-  const hours = open.reduce((s, t) => s + Math.max(0, t.estimateHours - t.loggedHours), 0);
-  return { open, hours, load: Math.round((hours / member.capacityHours) * 100) };
-}
-
-/* --------------------------------- Manager -------------------------------- */
-
-export function ManagerDashboard() {
-  const {
-    tasks,
-    members,
-    budgets,
-    materialRequests,
-    procurementItems,
-    currentUser,
-    currentApproverId,
-    currentMaterialRequestApproverId,
-  } = useWorkspace();
-  const day = today();
-  const budgetsNeedingAction = budgets.filter(
-    (b) => b.status === "pending" && currentApproverId(b) === currentUser.id,
+export function FarmerDashboard() {
+  const { currentUser, myListings, aggregationParticipants, produceListings, notificationsForUser, respondToAggregation } =
+    useWorkspace();
+  const active = myListings.filter((l) => l.status === "available" || l.status === "reserved");
+  const myPending = aggregationParticipants.filter(
+    (p) => p.farmerId === currentUser.id && p.status === "pending",
   );
-  const materialRequestsNeedingAction = materialRequests.filter(
-    (r) => r.status === "pending" && currentMaterialRequestApproverId(r) === currentUser.id,
-  );
-  const readyForProcurement = materialRequests.filter(
-    (r) => r.status === "approved" && !procurementItems.some((p) => p.materialRequestId === r.id),
-  );
-  const inProgress = tasks.filter((t) => t.status === "in_progress");
-  const blocked = tasks.filter((t) => t.status === "blocked");
-  const dueSoon = tasks
-    .filter((t) => t.status !== "completed" && t.dueDate >= day)
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-    .slice(0, 6);
-
-  const workers = members
-    .map((m) => ({ member: m, ...loadFor(m, tasks) }))
-    .sort((a, b) => b.load - a.load);
+  const notifications = notificationsForUser(currentUser.id);
 
   return (
     <div className="space-y-6">
-      {budgetsNeedingAction.length > 0 && (
-        <div className="surface-card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-warning p-4">
-          <div className="flex items-center gap-3">
-            <Wallet className="size-5 text-warning" />
-            <p className="text-sm text-foreground">
-              {budgetsNeedingAction.length} budget request
-              {budgetsNeedingAction.length === 1 ? "" : "s"} waiting on your approval.
-            </p>
-          </div>
-          <Button asChild size="sm">
-            <Link to="/budgets">Review now</Link>
-          </Button>
-        </div>
-      )}
-
-      {materialRequestsNeedingAction.length > 0 && (
-        <div className="surface-card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-warning p-4">
-          <div className="flex items-center gap-3">
-            <Package className="size-5 text-warning" />
-            <p className="text-sm text-foreground">
-              {materialRequestsNeedingAction.length} material request
-              {materialRequestsNeedingAction.length === 1 ? "" : "s"} waiting on your approval.
-            </p>
-          </div>
-          <Button asChild size="sm">
-            <Link to="/material-requests">Review now</Link>
-          </Button>
-        </div>
-      )}
-
-      {readyForProcurement.length > 0 && (
-        <div className="surface-card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-info p-4">
-          <div className="flex items-center gap-3">
-            <PackageSearch className="size-5 text-info" />
-            <p className="text-sm text-foreground">
-              {readyForProcurement.length} approved material request
-              {readyForProcurement.length === 1 ? "" : "s"} ready to send to procurement.
-            </p>
-          </div>
-          <Button asChild size="sm" variant="outline">
-            <Link to="/material-requests">Send now</Link>
-          </Button>
-        </div>
-      )}
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard icon={Sprout} title="Active listings" value={active.length} tone="brand" />
         <StatCard
-          icon={Clock}
-          title="In progress"
-          value={inProgress.length}
-          tone="brand"
-          hint="Being worked on now"
+          icon={Handshake}
+          title="Pending aggregation invites"
+          value={myPending.length}
+          tone={myPending.length ? "warning" : "success"}
         />
         <StatCard
-          icon={AlertTriangle}
-          title="Blocked"
-          value={blocked.length}
-          tone={blocked.length ? "warning" : "success"}
-          hint="Needs unblocking"
+          icon={ShieldCheck}
+          title="Reliability score"
+          value={`${currentUser.reliabilityScore}/100`}
+          tone="soft"
         />
-        <StatCard icon={Timer} title="Due this week" value={dueSoon.length} tone="soft" />
         <StatCard
-          icon={UserMinus}
-          title="Idle members"
-          value={workers.filter((w) => w.load === 0).length}
-          tone={workers.some((w) => w.load === 0) ? "warning" : "success"}
+          icon={CheckCircle2}
+          title="Sold this season"
+          value={myListings.filter((l) => l.status === "sold").length}
+          tone="success"
         />
       </div>
+
+      {myPending.length > 0 && (
+        <Panel title="Aggregation invites waiting on you" subtitle="Accept or decline within 24h">
+          <ul className="divide-y divide-border">
+            {myPending.map((p) => {
+              const listing = produceListings.find((l) => l.id === p.listingId);
+              const product = productById(listing?.productId);
+              return (
+                <li key={p.id} className="flex flex-wrap items-center gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {formatQuantity(p.allocatedQuantity, listing?.unit ?? "kg")} of {product?.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Agreed price {formatRwf(p.agreedUnitPrice)}/{listing?.unit}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => respondToAggregation(p.id, false)}>
+                    Decline
+                  </Button>
+                  <Button size="sm" onClick={() => respondToAggregation(p.id, true)}>
+                    Accept
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Panel
-            title="Team load"
-            subtitle="Remaining hours against weekly capacity"
+            title="My listings"
             action={
               <Button asChild variant="ghost" size="sm">
-                <Link to="/workload">Details</Link>
+                <Link to="/listings">All listings</Link>
               </Button>
             }
           >
             <ul className="divide-y divide-border">
-              {workers.map(({ member, open, hours, load }) => (
-                <li key={member.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <UserAvatar member={member} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{member.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {open.length} open · {hours}h remaining
-                    </p>
-                  </div>
-                  <div className="w-40">
-                    <Progress value={Math.min(100, load)} />
-                  </div>
-                  <span className="w-12 text-right text-xs text-muted-foreground">{load}%</span>
+              {myListings.length === 0 && (
+                <li className="p-6 text-sm text-muted-foreground">
+                  You haven't listed any produce yet.
                 </li>
-              ))}
+              )}
+              {myListings.slice(0, 6).map((l) => {
+                const product = productById(l.productId);
+                return (
+                  <li key={l.id} className="flex flex-wrap items-center gap-3 p-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{product?.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatQuantity(l.quantity, l.unit)} · {locationLabel(l.locationId)}
+                      </p>
+                    </div>
+                    <ListingStatusBadge status={l.status} />
+                  </li>
+                );
+              })}
             </ul>
           </Panel>
         </div>
 
-        <Panel
-          title="Next deadlines"
-          action={
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/tasks">All</Link>
-            </Button>
-          }
-        >
-          <TaskList rows={dueSoon} empty="No upcoming deadlines." />
+        <Panel title="Notifications">
+          <div className="p-2">
+            <NotificationFeed items={notifications} limit={6} />
+          </div>
         </Panel>
       </div>
-
-      <Panel title="Blocked work" subtitle="Clear these to keep the team moving">
-        <TaskList rows={blocked} empty="Nothing is blocked." />
-      </Panel>
-
-      <Panel
-        title="Live activity"
-        subtitle="What the team is doing right now"
-        action={
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/logs">Full log</Link>
-          </Button>
-        }
-      >
-        <div className="p-2">
-          <ActivityFeed limit={6} />
-        </div>
-      </Panel>
     </div>
   );
 }
 
-/* --------------------------------- Worker --------------------------------- */
+/* ---------------------------------- Buyer --------------------------------- */
 
-export function WorkerDashboard() {
-  const { visibleTasks, currentUser, updateTaskStatus } = useWorkspace();
-  const day = today();
-  const mine = visibleTasks;
-  const open = mine.filter((t) => t.status !== "completed");
-  const done = mine.filter((t) => t.status === "completed");
-  const overdue = open.filter((t) => t.dueDate < day);
-  const hours = open.reduce((s, t) => s + Math.max(0, t.estimateHours - t.loggedHours), 0);
-  const load = Math.round((hours / currentUser.capacityHours) * 100);
-  const completionRate = Math.round((done.length / (mine.length || 1)) * 100);
-
-  const upNext = [...open].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+export function BuyerDashboard() {
+  const { currentUser, myRequests, groupsForUser, matchingListingsForRequest, notificationsForUser } =
+    useWorkspace();
+  const open = myRequests.filter((r) => r.status === "open" || r.status === "partially_filled");
+  const groups = groupsForUser(currentUser.id);
+  const needingAggregation = open.filter((r) => matchingListingsForRequest(r.id).length > 0);
+  const notifications = notificationsForUser(currentUser.id);
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={ListTodo} title="My open tasks" value={open.length} tone="brand" />
-        <StatCard
-          icon={Activity}
-          title="My load"
-          value={`${load}%`}
-          tone={load > 100 ? "danger" : "soft"}
-          hint={`${hours}h of ${currentUser.capacityHours}h`}
-        />
+        <StatCard icon={ShoppingBasket} title="Open requests" value={open.length} tone="brand" />
+        <StatCard icon={Handshake} title="Aggregation groups" value={groups.length} tone="soft" />
         <StatCard
           icon={CheckCircle2}
-          title="Completed"
-          value={done.length}
+          title="Requests filled"
+          value={myRequests.filter((r) => r.status === "filled").length}
           tone="success"
-          trend={{ value: `${completionRate}% done`, positive: true }}
         />
         <StatCard
           icon={AlertTriangle}
-          title="Overdue"
-          value={overdue.length}
-          tone={overdue.length ? "danger" : "success"}
+          title="Ready to aggregate"
+          value={needingAggregation.length}
+          tone={needingAggregation.length ? "warning" : "success"}
+          hint="Matching listings found"
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Panel
-            title="Up next"
-            subtitle="Sorted by due date"
+            title="My requests"
             action={
               <Button asChild variant="ghost" size="sm">
-                <Link to="/my-tasks">My tasks</Link>
+                <Link to="/requests">All requests</Link>
               </Button>
             }
           >
             <ul className="divide-y divide-border">
-              {upNext.length === 0 && (
-                <li className="p-6 text-sm text-muted-foreground">You're all caught up.</li>
-              )}
-              {upNext.map((t) => (
-                <li key={t.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{t.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t.project} · due {t.dueDate}
-                    </p>
-                  </div>
-                  <PriorityBadge priority={t.priority} />
-                  <StatusBadge status={t.status} />
-                  {t.status !== "in_progress" ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateTaskStatus([t.id], "in_progress")}
-                    >
-                      Start
-                    </Button>
-                  ) : (
-                    <Button size="sm" onClick={() => updateTaskStatus([t.id], "completed")}>
-                      Complete
-                    </Button>
-                  )}
+              {myRequests.length === 0 && (
+                <li className="p-6 text-sm text-muted-foreground">
+                  You haven't posted any requests yet.
                 </li>
-              ))}
+              )}
+              {myRequests.slice(0, 6).map((r) => {
+                const product = productById(r.productId);
+                const matches = matchingListingsForRequest(r.id).length;
+                return (
+                  <li key={r.id} className="flex flex-wrap items-center gap-3 p-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {formatQuantity(r.quantityNeeded, r.unit)} {product?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Needed by {r.neededByDate} · {matches} matching listing{matches === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/requests/$requestId" params={{ requestId: r.id }}>
+                        View
+                      </Link>
+                    </Button>
+                  </li>
+                );
+              })}
             </ul>
           </Panel>
         </div>
 
-        <div className="space-y-6">
-          <div className="surface-card p-5">
-            <div className="flex items-center gap-2">
-              <Users className="size-4 text-primary" />
-              <h2 className="text-sm font-semibold text-foreground">My progress</h2>
-            </div>
-            <p className="mt-4 text-3xl font-semibold text-foreground">{completionRate}%</p>
-            <Progress value={completionRate} className="mt-3" />
-            <p className="mt-3 text-xs text-muted-foreground">
-              {done.length} of {mine.length} tasks done
-            </p>
+        <Panel title="Notifications">
+          <div className="p-2">
+            <NotificationFeed items={notifications} limit={6} />
           </div>
-          <Panel title="Recently completed">
-            <TaskList rows={done.slice(0, 4)} empty="No completed tasks yet." />
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------------- Supplier -------------------------------- */
+
+export function SupplierDashboard() {
+  const { currentUser, myInputListings, groupPurchases, pledgedQuantityFor, transactions, notificationsForUser } =
+    useWorkspace();
+  const collecting = groupPurchases.filter((g) => {
+    const listing = myInputListings.find((l) => l.id === g.inputListingId);
+    return listing && g.status === "collecting";
+  });
+  const orders = transactions.filter((t) => t.sellerId === currentUser.id);
+  const notifications = notificationsForUser(currentUser.id);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard icon={Package} title="Active input listings" value={myInputListings.length} tone="brand" />
+        <StatCard icon={Boxes} title="Group purchases collecting" value={collecting.length} tone="soft" />
+        <StatCard
+          icon={ShoppingCart}
+          title="Orders received"
+          value={orders.length}
+          tone="success"
+        />
+        <StatCard
+          icon={ShieldCheck}
+          title="Reliability score"
+          value={`${currentUser.reliabilityScore}/100`}
+          tone="soft"
+        />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Panel
+            title="Group purchases against your inputs"
+            action={
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/group-purchases">All group purchases</Link>
+              </Button>
+            }
+          >
+            <ul className="divide-y divide-border">
+              {collecting.length === 0 && (
+                <li className="p-6 text-sm text-muted-foreground">No group purchases collecting right now.</li>
+              )}
+              {collecting.map((g) => {
+                const listing = myInputListings.find((l) => l.id === g.inputListingId);
+                const product = productById(listing?.productId);
+                const pledged = pledgedQuantityFor(g.id);
+                const pct = Math.min(100, Math.round((pledged / g.thresholdQuantity) * 100));
+                return (
+                  <li key={g.id} className="flex flex-wrap items-center gap-3 p-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{product?.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatQuantity(pledged, listing?.unit ?? "kg")} of{" "}
+                        {formatQuantity(g.thresholdQuantity, listing?.unit ?? "kg")} pledged
+                      </p>
+                    </div>
+                    <div className="w-32">
+                      <Progress value={pct} />
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/group-purchases/$groupPurchaseId" params={{ groupPurchaseId: g.id }}>
+                        View
+                      </Link>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
           </Panel>
         </div>
+
+        <Panel title="Notifications">
+          <div className="p-2">
+            <NotificationFeed items={notifications} limit={6} />
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------- Admin ---------------------------------- */
+
+export function AdminDashboard() {
+  const { users, transactions, notifications, verifyUser } = useWorkspace();
+  const pendingVerification = users.filter((u) => !u.isVerified && u.roles.includes("supplier"));
+  const disputed = transactions.filter((t) => t.status === "disputed");
+  const gmv = transactions
+    .filter((t) => t.status === "completed")
+    .reduce((s, t) => s + t.quantity * t.unitPrice, 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard icon={Users} title="Platform users" value={users.length} tone="brand" />
+        <StatCard
+          icon={ShieldCheck}
+          title="Pending verifications"
+          value={pendingVerification.length}
+          tone={pendingVerification.length ? "warning" : "success"}
+        />
+        <StatCard
+          icon={AlertTriangle}
+          title="Open disputes"
+          value={disputed.length}
+          tone={disputed.length ? "danger" : "success"}
+        />
+        <StatCard icon={ShoppingCart} title="GMV completed" value={formatRwf(gmv)} tone="soft" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
+          <Panel title="Suppliers awaiting verification">
+            <ul className="divide-y divide-border">
+              {pendingVerification.length === 0 && (
+                <li className="p-6 text-sm text-muted-foreground">Nothing to review.</li>
+              )}
+              {pendingVerification.map((u) => (
+                <li key={u.id} className="flex flex-wrap items-center gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{u.name}</p>
+                    <p className="text-xs text-muted-foreground">{u.phone}</p>
+                  </div>
+                  <Button size="sm" onClick={() => verifyUser(u.id, true)}>
+                    Verify
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+
+          <Panel
+            title="Disputed transactions"
+            action={
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/transactions">All transactions</Link>
+              </Button>
+            }
+          >
+            <ul className="divide-y divide-border">
+              {disputed.length === 0 && (
+                <li className="p-6 text-sm text-muted-foreground">No open disputes.</li>
+              )}
+              {disputed.map((t) => {
+                const product = productById(t.productId);
+                return (
+                  <li key={t.id} className="flex flex-wrap items-center gap-3 p-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {formatQuantity(t.quantity, t.unit)} {product?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{t.disputeReason}</p>
+                    </div>
+                    <TransactionStatusBadge status={t.status} />
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/transactions/$transactionId" params={{ transactionId: t.id }}>
+                        Resolve
+                      </Link>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </Panel>
+        </div>
+
+        <Panel title="Platform activity">
+          <div className="p-2">
+            <NotificationFeed items={notifications} limit={8} />
+          </div>
+        </Panel>
       </div>
     </div>
   );

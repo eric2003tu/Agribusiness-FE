@@ -1,81 +1,71 @@
-import { useEffect } from "react";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { ManagerDashboard, WorkerDashboard } from "@/components/dashboard-views";
+import {
+  AdminDashboard,
+  BuyerDashboard,
+  FarmerDashboard,
+  SupplierDashboard,
+} from "@/components/dashboard-views";
 import { useWorkspace } from "@/lib/workspace-store";
-import { MANAGER_ROLES, ROLE_LABELS } from "@/lib/mock-data";
+import { ROLE_LABELS, primaryRole } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — TaskFlow work planner" },
+      { title: "Dashboard — Agribridge" },
       {
         name: "description",
         content:
-          "Role-based dashboards showing task progress, workload and idle capacity across your team in TaskFlow.",
+          "Role-based dashboards for farmers, buyers, suppliers and admins on the Agribridge marketplace.",
       },
-      { property: "og:title", content: "Dashboard — TaskFlow work planner" },
-      {
-        property: "og:description",
-        content: "Task progress, workload and idle capacity at a glance.",
-      },
-      { property: "og:type", content: "website" },
+      { property: "og:title", content: "Dashboard — Agribridge" },
     ],
   }),
   component: Dashboard,
 });
 
 function Dashboard() {
-  const { currentUser, effectiveUniversityId } = useWorkspace();
-  const navigate = useNavigate();
-  const role = currentUser.role;
-  const adminWithoutUniversity = role === "admin" && !effectiveUniversityId;
-  // Admin viewing a university acts exactly like that university's principal here.
-  const actsAsManager =
-    MANAGER_ROLES.includes(role) || (role === "admin" && !adminWithoutUniversity);
+  const { currentUser } = useWorkspace();
+  const role = primaryRole(currentUser);
 
-  useEffect(() => {
-    if (adminWithoutUniversity) void navigate({ to: "/universities", replace: true });
-    if (role === "finance") void navigate({ to: "/finance", replace: true });
-  }, [adminWithoutUniversity, role, navigate]);
-
-  if (adminWithoutUniversity || role === "finance") return null;
-
-  if (role === "student") {
-    return (
-      <AppShell
-        allowedRoles={["student"]}
-        title="My dashboard"
-        description={`Welcome back, ${currentUser.name.split(" ")[0]}. Tasks assigned to you.`}
-      >
-        <WorkerDashboard />
-      </AppShell>
-    );
-  }
+  const actions =
+    role === "farmer" ? (
+      <Button asChild>
+        <Link to="/listings/new">
+          <Plus className="size-4" /> New listing
+        </Link>
+      </Button>
+    ) : role === "buyer" ? (
+      <Button asChild>
+        <Link to="/requests/new">
+          <Plus className="size-4" /> New request
+        </Link>
+      </Button>
+    ) : role === "supplier" ? (
+      <Button asChild>
+        <Link to="/inputs/new">
+          <Plus className="size-4" /> List an input
+        </Link>
+      </Button>
+    ) : undefined;
 
   return (
     <AppShell
-      allowedRoles={["admin", ...MANAGER_ROLES, "staff"]}
-      title={actsAsManager ? `${ROLE_LABELS[role]} dashboard` : "My dashboard"}
-      description={`Welcome back, ${currentUser.name.split(" ")[0]}. ${
-        actsAsManager
-          ? "Track your team's progress, blockers and available capacity."
-          : "Your work for today — start tasks and mark them complete."
-      }`}
-      actions={
-        role === "staff" ? undefined : (
-          <Button asChild>
-            <Link to="/tasks/new">
-              <Plus className="size-4" /> New task
-            </Link>
-          </Button>
-        )
-      }
+      title={`${ROLE_LABELS[role]} dashboard`}
+      description={`Welcome back, ${currentUser.name.split(" ")[0]}.`}
+      actions={actions}
     >
-      {actsAsManager && <ManagerDashboard />}
-      {role === "staff" && <WorkerDashboard />}
+      {role === "farmer" && <FarmerDashboard />}
+      {role === "buyer" && <BuyerDashboard />}
+      {role === "supplier" && <SupplierDashboard />}
+      {role === "admin" && <AdminDashboard />}
+      {role === "transporter" && (
+        <p className="surface-card p-10 text-center text-sm text-muted-foreground">
+          Transport pooling opens once an aggregation group is confirmed — check back soon.
+        </p>
+      )}
     </AppShell>
   );
 }
