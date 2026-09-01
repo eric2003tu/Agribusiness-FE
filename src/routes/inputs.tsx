@@ -1,12 +1,22 @@
 import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
-import { Package, Plus } from "lucide-react";
+import { Building2, MapPinned, Package, PackageX, Plus, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
-import { DataTable, type Column } from "@/components/data-table";
+import { DataTable, type Column, type FilterConfig } from "@/components/data-table";
+import { ReliabilityBadge } from "@/components/reliability-badge";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
-import { locations, productById, type InputListing } from "@/lib/mock-data";
+import {
+  categories,
+  categoryById,
+  districtOf,
+  DISTRICTS,
+  locationById,
+  productById,
+  type InputListing,
+} from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/inputs")({
   head: () => ({
@@ -18,6 +28,32 @@ export const Route = createFileRoute("/inputs")({
   component: InputsPage,
 });
 
+const INPUT_CATEGORIES = categories.filter((c) => c.type === "input" && c.parentId === "cat-inputs");
+
+const CATEGORY_STYLES: Record<string, string> = {
+  "cat-fertilizer": "bg-primary-soft text-primary",
+  "cat-seed": "bg-success/12 text-success",
+  "cat-pesticide": "bg-warning/20 text-warning-foreground",
+};
+
+function categoryOf(input: InputListing) {
+  return categoryById(productById(input.productId)?.categoryId);
+}
+
+function CategoryBadge({ input }: { input: InputListing }) {
+  const category = categoryOf(input);
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap",
+        (category && CATEGORY_STYLES[category.id]) || "bg-muted text-muted-foreground",
+      )}
+    >
+      {category?.name ?? "Input"}
+    </span>
+  );
+}
+
 function InputsPage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { inputListings, userById, can } = useWorkspace();
@@ -26,11 +62,23 @@ function InputsPage() {
     return <Outlet />;
   }
 
+  const suppliers = new Set(inputListings.map((l) => l.supplierId));
+  const verifiedSuppliers = [...suppliers].filter((id) => userById(id)?.isVerified).length;
+  const districtsServed = new Set(inputListings.flatMap((l) => l.deliveryDistrictIds)).size;
+  const outOfStock = inputListings.filter((l) => l.stockQty === 0).length;
+
   const columns: Column<InputListing>[] = [
     {
       key: "product",
       header: "Input",
-      render: (l) => productById(l.productId)?.name ?? "—",
+      render: (l) => (
+        <div className="min-w-0">
+          <p className="font-medium text-foreground">{productById(l.productId)?.name ?? "—"}</p>
+          <div className="mt-1">
+            <CategoryBadge input={l} />
+          </div>
+        </div>
+      ),
       exportValue: (l) => productById(l.productId)?.name ?? "",
     },
     {
@@ -42,25 +90,45 @@ function InputsPage() {
     {
       key: "stock",
       header: "In stock",
-      render: (l) => formatQuantity(l.stockQty, l.unit),
+      render: (l) =>
+        l.stockQty === 0 ? (
+          <span className="font-medium text-destructive">Out of stock</span>
+        ) : (
+          formatQuantity(l.stockQty, l.unit)
+        ),
       exportValue: (l) => l.stockQty,
     },
     {
       key: "supplier",
       header: "Supplier",
-      render: (l) => userById(l.supplierId)?.name ?? "—",
+      render: (l) => {
+        const supplier = userById(l.supplierId);
+        return (
+          <div className="flex items-center gap-1.5">
+            <span>{supplier?.name ?? "—"}</span>
+            {supplier?.isVerified && (
+              <ShieldCheck className="size-3.5 shrink-0 text-success" aria-label="Verified supplier" />
+            )}
+          </div>
+        );
+      },
       exportValue: (l) => userById(l.supplierId)?.name ?? "",
+    },
+    {
+      key: "reliability",
+      header: "Reliability",
+      render: (l) => <ReliabilityBadge score={userById(l.supplierId)?.reliabilityScore ?? 0} />,
+      exportValue: (l) => userById(l.supplierId)?.reliabilityScore ?? 0,
     },
     {
       key: "delivery",
       header: "Delivers to",
-      render: (l) =>
-        l.deliveryDistrictIds
-          .map((id) => locations.find((loc) => loc.id === id)?.name)
-          .filter(Boolean)
-          .join(", "),
+      render: (l) => {
+        const names = l.deliveryDistrictIds.map((id) => locationById(id)?.name).filter(Boolean);
+        return names.length > 0 ? names.join(", ") : "Not specified";
+      },
       exportValue: (l) =>
-        l.deliveryDistrictIds.map((id) => locations.find((loc) => loc.id === id)?.name).join(", "),
+        l.deliveryDistrictIds.map((id) => locationById(id)?.name).filter(Boolean).join(", "),
     },
     {
       key: "actions",
@@ -73,6 +141,21 @@ function InputsPage() {
         </Button>
       ),
       exportValue: () => "",
+    },
+  ];
+
+  const filters: FilterConfig<InputListing>[] = [
+    {
+      key: "category",
+      label: "Category",
+      options: INPUT_CATEGORIES.map((c) => ({ value: c.id, label: c.name })),
+      match: (l, v) => categoryOf(l)?.id === v,
+    },
+    {
+      key: "district",
+      label: "District",
+      options: DISTRICTS.map((d) => ({ value: d.id, label: d.name })),
+      match: (l, v) => l.deliveryDistrictIds.some((id) => districtOf(id)?.id === v),
     },
   ];
 
@@ -93,10 +176,17 @@ function InputsPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Package} title="Input listings" value={inputListings.length} tone="brand" />
         <StatCard
-          icon={Package}
-          title="Total stock (kg equiv.)"
-          value={inputListings.reduce((s, l) => s + l.stockQty, 0).toLocaleString()}
-          tone="soft"
+          icon={ShieldCheck}
+          title="Verified suppliers"
+          value={`${verifiedSuppliers}/${suppliers.size}`}
+          tone={verifiedSuppliers === suppliers.size ? "success" : "warning"}
+        />
+        <StatCard icon={MapPinned} title="Districts served" value={districtsServed} tone="soft" />
+        <StatCard
+          icon={outOfStock ? PackageX : Building2}
+          title="Out of stock"
+          value={outOfStock}
+          tone={outOfStock ? "danger" : "success"}
         />
       </div>
 
@@ -105,10 +195,11 @@ function InputsPage() {
         columns={columns}
         getRowId={(l) => l.id}
         searchFields={(l) => `${productById(l.productId)?.name} ${userById(l.supplierId)?.name}`}
+        filters={filters}
         exportFileName="input-listings"
         paginate
         searchPlaceholder="Search by input or supplier…"
-        emptyMessage="No input listings yet."
+        emptyMessage="No input listings match your filters."
       />
     </AppShell>
   );

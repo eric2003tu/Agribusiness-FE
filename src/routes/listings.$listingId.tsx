@@ -49,7 +49,7 @@ function ListingDetail() {
   const [editGrade, setEditGrade] = useState("");
   const [editPhotos, setEditPhotos] = useState<string[]>([]);
   const [buyQuantity, setBuyQuantity] = useState("");
-  const [buyPrice, setBuyPrice] = useState("");
+  const [buyPrice, setBuyPrice] = useState(() => (listing?.unitPrice ? String(listing.unitPrice) : ""));
 
   if (!listing) {
     return (
@@ -121,7 +121,9 @@ function ListingDetail() {
               <div>
                 <dt className="text-muted-foreground">Price</dt>
                 <dd className="font-medium text-foreground">
-                  {listing.unitPrice ? `${formatRwf(listing.unitPrice)}/${listing.unit}` : "Negotiable"}
+                  {listing.unitPrice
+                    ? `${formatRwf(listing.unitPrice)}/${listing.unit}${listing.negotiable ? " (negotiable)" : ""}`
+                    : "Negotiable — no asking price set"}
                 </dd>
               </div>
               <div>
@@ -281,6 +283,9 @@ function ListingDetail() {
                         value={buyPrice}
                         onChange={(e) => setBuyPrice(e.target.value)}
                       />
+                      {listing.unitPrice && (
+                        <p className="text-xs text-muted-foreground">Asking {formatRwf(listing.unitPrice)}/{listing.unit}</p>
+                      )}
                     </div>
                   )}
                   <Button

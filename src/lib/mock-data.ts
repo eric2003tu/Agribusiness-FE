@@ -453,6 +453,10 @@ export function productById(id: string | undefined | null): Product | undefined 
   return id ? products.find((p) => p.id === id) : undefined;
 }
 
+export function categoryById(id: string | undefined | null): Category | undefined {
+  return id ? categories.find((c) => c.id === id) : undefined;
+}
+
 /* --------------------------------- Cooperatives -------------------------------- */
 
 export const cooperatives: Cooperative[] = [
