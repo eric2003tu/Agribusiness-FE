@@ -43,7 +43,7 @@ function NewRequestPage() {
   return (
     <AppShell title="New buyer request" description="Tell farmers and cooperatives what you need.">
       <form
-        className="surface-card mx-auto max-w-2xl space-y-5 p-6"
+        className="surface-card mx-auto  space-y-5 p-6"
         onSubmit={(e) => {
           e.preventDefault();
           submit();

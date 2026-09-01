@@ -24,6 +24,7 @@ function AggregationDetail() {
     currentUser,
     respondToAggregation,
     confirmAggregationGroup,
+    topUpAggregationGroup,
     can,
   } = useWorkspace();
   const group = aggregationGroups.find((g) => g.id === groupId);
@@ -51,8 +52,17 @@ function AggregationDetail() {
       title={`Aggregation for ${product?.name ?? "request"}`}
       description={`Buyer: ${buyer?.name ?? "unknown"} · deadline ${group.deadline}`}
       actions={
-        canConfirm && accepted.length > 0 ? (
-          <Button onClick={() => confirmAggregationGroup(group.id)}>Confirm group</Button>
+        canConfirm ? (
+          <>
+            {confirmedQuantity < group.targetQuantity && (
+              <Button variant="outline" onClick={() => topUpAggregationGroup(group.id)}>
+                Find more farmers for the shortfall
+              </Button>
+            )}
+            {accepted.length > 0 && (
+              <Button onClick={() => confirmAggregationGroup(group.id)}>Confirm group</Button>
+            )}
+          </>
         ) : undefined
       }
     >

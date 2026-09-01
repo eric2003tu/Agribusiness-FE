@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PhotoUploader } from "@/components/photo-uploader";
 import { useWorkspace } from "@/lib/workspace-store";
 import { locations, products, type ListingScope, type Unit } from "@/lib/mock-data";
 
@@ -29,6 +30,7 @@ function NewListingPage() {
   const [harvestDate, setHarvestDate] = useState(new Date().toISOString().slice(0, 10));
   const [qualityGrade, setQualityGrade] = useState("");
   const [listingScope, setListingScope] = useState<ListingScope>("commercial");
+  const [photos, setPhotos] = useState<string[]>([]);
 
   function submit() {
     const qty = Number(quantity);
@@ -46,6 +48,7 @@ function NewListingPage() {
       ...(qualityGrade ? { qualityGrade } : {}),
       listingScope,
       expiresAt: expires.toISOString().slice(0, 10),
+      ...(photos.length > 0 ? { photos } : {}),
     });
     void navigate({ to: "/listings" });
   }
@@ -53,7 +56,7 @@ function NewListingPage() {
   return (
     <AppShell title="New produce listing" description="List your harvest for buyers and other farmers to find.">
       <form
-        className="surface-card mx-auto space-y-5 p-6"
+        className="surface-card mx-auto max-w-2xl space-y-5 p-6"
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -160,6 +163,11 @@ function NewListingPage() {
               onChange={(e) => setQualityGrade(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Label>Photos (optional)</Label>
+          <PhotoUploader photos={photos} onChange={setPhotos} />
         </div>
 
         <div className="grid gap-2">

@@ -153,6 +153,8 @@ export interface ProduceListing {
   status: ListingStatus;
   expiresAt: string;
   createdAt: string;
+  /** compressed data-URL thumbnails, uploaded client-side */
+  photos?: string[];
 }
 
 export type RequestStatus = "open" | "partially_filled" | "filled" | "cancelled";
@@ -330,6 +332,14 @@ export interface NotificationLog {
   kind: NotificationKind;
   title: string;
   detail: string;
+}
+
+export interface TransportOffer {
+  id: string;
+  groupId: string;
+  transporterId: string;
+  note?: string;
+  createdAt: string;
 }
 
 function day(offset: number) {
@@ -769,10 +779,12 @@ export const produceListings: ProduceListing[] = [
   { id: "PL-1005", sellerId: "u4", productId: "prod-irish-potato", quantity: 350, unit: "kg", unitPrice: 240, negotiable: true, locationId: "sec-nyange", harvestDate: day(-2), listingScope: "peer", status: "available", expiresAt: day(60), createdAt: day(-2) },
   { id: "PL-1006", sellerId: "u5", productId: "prod-tomato", quantity: 300, unit: "kg", unitPrice: 450, negotiable: false, locationId: "sec-ngoma", harvestDate: day(-1), listingScope: "commercial", status: "available", expiresAt: day(4), createdAt: day(-1) },
   { id: "PL-1007", sellerId: "u6", productId: "prod-tomato", quantity: 120, unit: "kg", unitPrice: 420, negotiable: true, locationId: "sec-tumba", harvestDate: day(-4), listingScope: "peer", status: "available", expiresAt: day(1), createdAt: day(-4) },
-  { id: "PL-1008", sellerId: "u8", productId: "prod-beans", quantity: 900, unit: "kg", unitPrice: 600, negotiable: false, locationId: "dist-gicumbi", harvestDate: day(-10), qualityGrade: "Grade B", listingScope: "commercial", status: "available", expiresAt: day(90), createdAt: day(-10) },
+  { id: "PL-1008", sellerId: "u8", productId: "prod-beans", quantity: 900, unit: "kg", unitPrice: 600, negotiable: false, locationId: "dist-gicumbi", harvestDate: day(-10), qualityGrade: "Grade B", listingScope: "commercial", status: "reserved", expiresAt: day(90), createdAt: day(-10) },
   { id: "PL-1009", sellerId: "u9", productId: "prod-cassava", quantity: 1500, unit: "kg", unitPrice: 180, negotiable: true, locationId: "dist-nyanza", harvestDate: day(-1), listingScope: "commercial", status: "available", expiresAt: day(6), createdAt: day(-1) },
   { id: "PL-1010", sellerId: "u10", productId: "prod-banana", quantity: 600, unit: "kg", unitPrice: 280, negotiable: false, locationId: "dist-rwamagana", harvestDate: day(-2), listingScope: "commercial", status: "sold", expiresAt: day(6), createdAt: day(-9) },
-  { id: "PL-1011", sellerId: "u1", productId: "prod-beans", quantity: 400, unit: "kg", unitPrice: 590, negotiable: false, locationId: "sec-katabagemu", harvestDate: day(-15), listingScope: "peer", status: "available", expiresAt: day(70), createdAt: day(-15) },
+  { id: "PL-1011", sellerId: "u1", productId: "prod-beans", quantity: 400, unit: "kg", unitPrice: 590, negotiable: false, locationId: "sec-katabagemu", harvestDate: day(-15), listingScope: "peer", status: "reserved", expiresAt: day(70), createdAt: day(-15) },
+  { id: "PL-1016", sellerId: "u1", productId: "prod-onion", quantity: 300, unit: "kg", unitPrice: 400, negotiable: false, locationId: "sec-katabagemu", harvestDate: day(-40), listingScope: "commercial", status: "sold", expiresAt: day(40), createdAt: day(-40) },
+  { id: "PL-1017", sellerId: "u1", productId: "prod-cassava", quantity: 150, unit: "kg", unitPrice: 175, negotiable: false, locationId: "sec-katabagemu", harvestDate: day(-60), listingScope: "commercial", status: "expired", expiresAt: day(-10), createdAt: day(-60) },
   { id: "PL-1012", sellerId: "u2", productId: "prod-rice", quantity: 1000, unit: "kg", unitPrice: 520, negotiable: false, locationId: "sec-rukomo", harvestDate: day(-20), listingScope: "commercial", status: "available", expiresAt: day(240), createdAt: day(-20) },
   { id: "PL-1013", sellerId: "u5", productId: "prod-avocado", quantity: 200, unit: "kg", unitPrice: 380, negotiable: true, locationId: "sec-ngoma", harvestDate: day(-1), listingScope: "peer", status: "available", expiresAt: day(2), createdAt: day(-1) },
   { id: "PL-1014", sellerId: "u3", productId: "prod-onion", quantity: 750, unit: "kg", unitPrice: 400, negotiable: false, locationId: "sec-muhoza", harvestDate: day(-30), listingScope: "commercial", status: "available", expiresAt: day(80), createdAt: day(-30) },
@@ -788,6 +800,8 @@ export const buyerRequests: BuyerRequest[] = [
   { id: "BR-2004", buyerId: "u13", productId: "prod-beans", quantityNeeded: 600, unit: "kg", targetPrice: null, deliveryLocationId: "dist-gicumbi", neededByDate: day(20), status: "open", createdAt: day(-1) },
   { id: "BR-2005", buyerId: "u7", productId: "prod-rice", quantityNeeded: 800, unit: "kg", targetPrice: 510, deliveryLocationId: "dist-nyagatare", neededByDate: day(30), status: "open", createdAt: day(-3) },
   { id: "BR-2006", buyerId: "u12", productId: "prod-banana", quantityNeeded: 600, unit: "kg", targetPrice: 275, deliveryLocationId: "dist-kicukiro", neededByDate: day(5), status: "filled", createdAt: day(-11) },
+  { id: "BR-2007", buyerId: "u11", productId: "prod-beans", quantityNeeded: 800, unit: "kg", targetPrice: 600, deliveryLocationId: "dist-nyagatare", neededByDate: day(-4), status: "filled", createdAt: day(-16) },
+  { id: "BR-2008", buyerId: "u11", productId: "prod-tomato", quantityNeeded: 300, unit: "kg", targetPrice: 430, deliveryLocationId: "dist-nyagatare", neededByDate: day(-1), status: "cancelled", createdAt: day(-9) },
 ];
 
 /* --------------------------------- Aggregation -------------------------------- */
@@ -826,6 +840,17 @@ export const aggregationGroups: AggregationGroup[] = [
     deadline: day(-2),
     createdAt: day(-10),
   },
+  {
+    id: "AG-3004",
+    type: "sale",
+    requestId: "BR-2004",
+    status: "proposed",
+    targetQuantity: 600,
+    unit: "kg",
+    unitPrice: 600,
+    deadline: day(3),
+    createdAt: day(-1),
+  },
 ];
 
 export const aggregationParticipants: AggregationParticipant[] = [
@@ -835,6 +860,8 @@ export const aggregationParticipants: AggregationParticipant[] = [
   { id: "AP-4", groupId: "AG-3002", listingId: "PL-1004", farmerId: "u3", allocatedQuantity: 2000, status: "accepted", agreedUnitPrice: 245 },
   { id: "AP-5", groupId: "AG-3002", listingId: "PL-1005", farmerId: "u4", allocatedQuantity: 350, status: "declined", agreedUnitPrice: 245 },
   { id: "AP-6", groupId: "AG-3003", listingId: "PL-1010", farmerId: "u10", allocatedQuantity: 600, status: "accepted", agreedUnitPrice: 275 },
+  { id: "AP-7", groupId: "AG-3004", listingId: "PL-1011", farmerId: "u1", allocatedQuantity: 400, status: "pending", agreedUnitPrice: 600 },
+  { id: "AP-8", groupId: "AG-3004", listingId: "PL-1008", farmerId: "u8", allocatedQuantity: 200, status: "pending", agreedUnitPrice: 600 },
 ];
 
 /* --------------------------------- Input marketplace -------------------------------- */
@@ -851,6 +878,8 @@ export const inputListings: InputListing[] = [
 export const groupPurchases: GroupPurchase[] = [
   { id: "GP-5001", inputListingId: "IL-4001", thresholdQuantity: 5000, deadline: day(4), status: "collecting", supplierInvoiceTotal: null, createdAt: day(-6) },
   { id: "GP-5002", inputListingId: "IL-4003", thresholdQuantity: 1000, deadline: day(-1), status: "fulfilled", supplierInvoiceTotal: 2_310_000, createdAt: day(-20) },
+  { id: "GP-5003", inputListingId: "IL-4002", thresholdQuantity: 800, deadline: day(-15), status: "fulfilled", supplierInvoiceTotal: 840_000, createdAt: day(-30) },
+  { id: "GP-5004", inputListingId: "IL-4005", thresholdQuantity: 200, deadline: day(-25), status: "expired", supplierInvoiceTotal: null, createdAt: day(-35) },
 ];
 
 export const groupPurchasePledges: GroupPurchasePledge[] = [
@@ -859,6 +888,8 @@ export const groupPurchasePledges: GroupPurchasePledge[] = [
   { id: "GPP-3", groupPurchaseId: "GP-5001", farmerId: "u7", pledgedQuantity: 1500, computedShareAmount: null },
   { id: "GPP-4", groupPurchaseId: "GP-5002", farmerId: "u3", pledgedQuantity: 600, computedShareAmount: 1_386_000 },
   { id: "GPP-5", groupPurchaseId: "GP-5002", farmerId: "u4", pledgedQuantity: 420, computedShareAmount: 970_200 },
+  { id: "GPP-6", groupPurchaseId: "GP-5003", farmerId: "u1", pledgedQuantity: 500, computedShareAmount: 525_000 },
+  { id: "GPP-7", groupPurchaseId: "GP-5003", farmerId: "u8", pledgedQuantity: 300, computedShareAmount: 315_000 },
 ];
 
 /* --------------------------------- Transactions & reviews -------------------------------- */
@@ -869,7 +900,17 @@ export const transactions: Transaction[] = [
   { id: "TX-6003", buyerId: "u13", sellerId: "u8", groupId: null, productId: "prod-beans", quantity: 200, unit: "kg", unitPrice: 600, status: "confirmed_by_seller", confirmedBySeller: true, confirmedByBuyer: false, createdAt: day(-2), completedAt: null },
   { id: "TX-6004", buyerId: "u12", sellerId: "u5", groupId: null, productId: "prod-tomato", quantity: 100, unit: "kg", unitPrice: 440, status: "pending", confirmedBySeller: false, confirmedByBuyer: false, createdAt: day(-1), completedAt: null },
   { id: "TX-6005", buyerId: "u7", sellerId: "u9", groupId: null, productId: "prod-cassava", quantity: 500, unit: "kg", unitPrice: 175, status: "disputed", confirmedBySeller: true, confirmedByBuyer: false, disputeReason: "Delivered quantity was short by roughly 40kg.", createdAt: day(-5), completedAt: null },
-  { id: "TX-6006", buyerId: "u1", sellerId: "u14", groupId: "GP-5002", productId: "prod-maize-seed", quantity: 600, unit: "kg", unitPrice: 2310, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-18), completedAt: day(-16) },
+  { id: "TX-6006", buyerId: "u1", sellerId: "u15", groupId: "GP-5002", productId: "prod-maize-seed", quantity: 600, unit: "kg", unitPrice: 2310, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-18), completedAt: day(-16) },
+  { id: "TX-6007", buyerId: "u12", sellerId: "u1", groupId: null, productId: "prod-beans", quantity: 200, unit: "kg", unitPrice: 590, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-27), completedAt: day(-25) },
+  { id: "TX-6008", buyerId: "u13", sellerId: "u1", groupId: null, productId: "prod-onion", quantity: 150, unit: "kg", unitPrice: 400, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-7), completedAt: day(-5) },
+  { id: "TX-6009", buyerId: "u7", sellerId: "u1", groupId: null, productId: "prod-maize", quantity: 100, unit: "kg", unitPrice: 320, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-3), completedAt: day(-2) },
+  { id: "TX-6010", buyerId: "u7", sellerId: "u14", groupId: null, productId: "prod-urea", quantity: 500, unit: "kg", unitPrice: 900, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-22), completedAt: day(-20) },
+  { id: "TX-6011", buyerId: "u2", sellerId: "u16", groupId: null, productId: "prod-mancozeb", quantity: 20, unit: "litre", unitPrice: 6500, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-10), completedAt: day(-9) },
+  { id: "TX-6012", buyerId: "u3", sellerId: "u14", groupId: null, productId: "prod-dap", quantity: 300, unit: "kg", unitPrice: 1050, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-14), completedAt: day(-13) },
+  { id: "TX-6013", buyerId: "u5", sellerId: "u14", groupId: null, productId: "prod-urea", quantity: 250, unit: "kg", unitPrice: 900, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-4), completedAt: day(-3) },
+  { id: "TX-6014", buyerId: "u11", sellerId: "u3", groupId: null, productId: "prod-irish-potato", quantity: 400, unit: "kg", unitPrice: 248, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-16), completedAt: day(-15) },
+  { id: "TX-6015", buyerId: "u11", sellerId: "u8", groupId: null, productId: "prod-beans", quantity: 250, unit: "kg", unitPrice: 605, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-30), completedAt: day(-28) },
+  { id: "TX-6016", buyerId: "u12", sellerId: "u9", groupId: null, productId: "prod-cassava", quantity: 300, unit: "kg", unitPrice: 180, status: "confirmed_by_buyer", confirmedBySeller: false, confirmedByBuyer: true, createdAt: day(-1), completedAt: null },
 ];
 
 export const ratings: Rating[] = [
@@ -924,4 +965,14 @@ export const notificationLog: NotificationLog[] = [
   { id: "N-6", timestamp: hoursAgo(10), userId: "u1", kind: "group_purchase", title: "Group purchase update", detail: "Urea fertilizer group purchase is at 2,900 / 5,000kg pledged." },
   { id: "N-7", timestamp: hoursAgo(20), userId: "u9", kind: "transaction", title: "Buyer raised a dispute", detail: "Samuel Okoro disputed transaction TX-6005 — short delivery." },
   { id: "N-8", timestamp: hoursAgo(30), userId: "u12", kind: "transaction", title: "Transaction completed", detail: "Your purchase of 600kg bananas from Immaculee Mukamana is complete." },
+];
+
+export const transportOffers: TransportOffer[] = [
+  {
+    id: "TO-1",
+    groupId: "AG-3003",
+    transporterId: "u17",
+    note: "Pickup available Thursday morning, 3-ton truck.",
+    createdAt: hoursAgo(18),
+  },
 ];

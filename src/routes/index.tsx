@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { KeyRound, Loader2, LogIn, Package, ShieldCheck, ShoppingBasket, Sprout, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,6 +122,13 @@ function LoginPage() {
               Sign in
             </Button>
           </form>
+
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            New here?{" "}
+            <Link to="/register" className="font-medium text-primary hover:underline">
+              Create an account
+            </Link>
+          </p>
 
           <div className="mt-8">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">

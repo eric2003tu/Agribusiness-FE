@@ -20,9 +20,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as MarketPricesRouteImport } from './routes/market-prices'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RequestsRouteImport } from './routes/requests'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as TransportPoolRouteImport } from './routes/transport-pool'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as AggregationGroupIdRouteImport } from './routes/aggregation.$groupId'
 import { Route as GroupPurchasesGroupPurchaseIdRouteImport } from './routes/group-purchases.$groupPurchaseId'
@@ -90,6 +92,11 @@ const MessagesRoute = MessagesRouteImport.update({
   path: '/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RequestsRoute = RequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
@@ -103,6 +110,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TransportPoolRoute = TransportPoolRouteImport.update({
+  id: '/transport-pool',
+  path: '/transport-pool',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsersRoute = UsersRouteImport.update({
@@ -175,9 +187,11 @@ export interface FileRoutesByFullPath {
   '/logs': typeof LogsRoute
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
+  '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRouteWithChildren
+  '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
   '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
@@ -202,9 +216,11 @@ export interface FileRoutesByTo {
   '/logs': typeof LogsRoute
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
+  '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRouteWithChildren
+  '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
   '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
@@ -230,9 +246,11 @@ export interface FileRoutesById {
   '/logs': typeof LogsRoute
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
+  '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRouteWithChildren
+  '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
   '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
@@ -259,9 +277,11 @@ export interface FileRouteTypes {
     | '/logs'
     | '/market-prices'
     | '/messages'
+    | '/register'
     | '/requests'
     | '/settings'
     | '/transactions'
+    | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
     | '/group-purchases/$groupPurchaseId'
@@ -286,9 +306,11 @@ export interface FileRouteTypes {
     | '/logs'
     | '/market-prices'
     | '/messages'
+    | '/register'
     | '/requests'
     | '/settings'
     | '/transactions'
+    | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
     | '/group-purchases/$groupPurchaseId'
@@ -313,9 +335,11 @@ export interface FileRouteTypes {
     | '/logs'
     | '/market-prices'
     | '/messages'
+    | '/register'
     | '/requests'
     | '/settings'
     | '/transactions'
+    | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
     | '/group-purchases/$groupPurchaseId'
@@ -341,9 +365,11 @@ export interface RootRouteChildren {
   LogsRoute: typeof LogsRoute
   MarketPricesRoute: typeof MarketPricesRoute
   MessagesRoute: typeof MessagesRoute
+  RegisterRoute: typeof RegisterRoute
   RequestsRoute: typeof RequestsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
   TransactionsRoute: typeof TransactionsRouteWithChildren
+  TransportPoolRoute: typeof TransportPoolRoute
   UsersRoute: typeof UsersRouteWithChildren
 }
 
@@ -426,6 +452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/requests': {
       id: '/requests'
       path: '/requests'
@@ -445,6 +478,13 @@ declare module '@tanstack/react-router' {
       path: '/transactions'
       fullPath: '/transactions'
       preLoaderRoute: typeof TransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transport-pool': {
+      id: '/transport-pool'
+      path: '/transport-pool'
+      fullPath: '/transport-pool'
+      preLoaderRoute: typeof TransportPoolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/users': {
@@ -626,9 +666,11 @@ const rootRouteChildren: RootRouteChildren = {
   LogsRoute: LogsRoute,
   MarketPricesRoute: MarketPricesRoute,
   MessagesRoute: MessagesRoute,
+  RegisterRoute: RegisterRoute,
   RequestsRoute: RequestsRouteWithChildren,
   SettingsRoute: SettingsRoute,
   TransactionsRoute: TransactionsRouteWithChildren,
+  TransportPoolRoute: TransportPoolRoute,
   UsersRoute: UsersRouteWithChildren,
 }
 export const routeTree = rootRouteImport

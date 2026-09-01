@@ -93,7 +93,7 @@ function GroupPurchasesPage() {
       title="Group purchases"
       description="Pool your input orders with nearby farmers for a bulk discount."
     >
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard icon={Boxes} title="Total" value={groupPurchases.length} tone="brand" />
         <StatCard
           icon={Boxes}

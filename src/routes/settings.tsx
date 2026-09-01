@@ -10,13 +10,13 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReliabilityBadge } from "@/components/reliability-badge";
 import { useWorkspace } from "@/lib/workspace-store";
-import { LANGUAGE_LABELS, locations, type Language } from "@/lib/mock-data";
+import { locations } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
       { title: "Settings — Agribridge" },
-      { name: "description", content: "Manage your Agribridge profile, language and location." },
+      { name: "description", content: "Manage your Agribridge profile and location." },
     ],
   }),
   component: Settings,
@@ -27,13 +27,12 @@ const nonRegionLocations = locations.filter((l) => l.level !== "region");
 function Settings() {
   const { currentUser, updateProfile } = useWorkspace();
   const [name, setName] = useState(currentUser.name);
-  const [language, setLanguage] = useState<Language>(currentUser.preferredLanguage);
   const [locationId, setLocationId] = useState(currentUser.locationId);
   const [nationalId, setNationalId] = useState(currentUser.nationalId ?? "");
 
   return (
     <AppShell title="Settings" description="Your Agribridge profile.">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
         <StatCard
           icon={ShieldCheck}
           title="Reliability score"
@@ -48,7 +47,7 @@ function Settings() {
         />
       </div>
 
-      <div className="surface-card max-w-2xl p-6">
+      <div className="surface-card  p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Profile</h2>
           <ReliabilityBadge score={currentUser.reliabilityScore} />
@@ -61,21 +60,6 @@ function Settings() {
           <div className="grid gap-2">
             <Label>Phone number</Label>
             <Input value={currentUser.phone} disabled />
-          </div>
-          <div className="grid gap-2">
-            <Label>Preferred language</Label>
-            <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(LANGUAGE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <div className="grid gap-2">
             <Label>Location</Label>
@@ -115,7 +99,6 @@ function Settings() {
             onClick={() =>
               updateProfile({
                 name,
-                preferredLanguage: language,
                 locationId,
                 ...(nationalId ? { nationalId } : {}),
               })

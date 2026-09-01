@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Plus, Truck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,6 +7,7 @@ import {
   BuyerDashboard,
   FarmerDashboard,
   SupplierDashboard,
+  TransporterDashboard,
 } from "@/components/dashboard-views";
 import { useWorkspace } from "@/lib/workspace-store";
 import { ROLE_LABELS, primaryRole } from "@/lib/mock-data";
@@ -49,6 +50,12 @@ function Dashboard() {
           <Plus className="size-4" /> List an input
         </Link>
       </Button>
+    ) : role === "transporter" ? (
+      <Button asChild>
+        <Link to="/transport-pool">
+          <Truck className="size-4" /> Transport pooling
+        </Link>
+      </Button>
     ) : undefined;
 
   return (
@@ -61,11 +68,7 @@ function Dashboard() {
       {role === "buyer" && <BuyerDashboard />}
       {role === "supplier" && <SupplierDashboard />}
       {role === "admin" && <AdminDashboard />}
-      {role === "transporter" && (
-        <p className="surface-card p-10 text-center text-sm text-muted-foreground">
-          Transport pooling opens once an aggregation group is confirmed — check back soon.
-        </p>
-      )}
+      {role === "transporter" && <TransporterDashboard />}
     </AppShell>
   );
 }

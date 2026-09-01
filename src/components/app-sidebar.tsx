@@ -12,6 +12,7 @@ import {
   ShoppingBasket,
   ShoppingCart,
   Sprout,
+  Truck,
   Users,
 } from "lucide-react";
 import {
@@ -51,6 +52,7 @@ const NAV: NavItem[] = [
   { title: "Group purchases", url: "/group-purchases", icon: Boxes, roles: ["farmer", "supplier", "admin"], group: "Marketplace" },
   { title: "Transactions", url: "/transactions", icon: ShoppingCart, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
   { title: "Market prices", url: "/market-prices", icon: LineChart, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
+  { title: "Transport pooling", url: "/transport-pool", icon: Truck, roles: ["transporter", "admin"], group: "Marketplace" },
 
   { title: "Users", url: "/users", icon: Users, roles: ["admin"], group: "Management" },
   { title: "Cooperatives", url: "/cooperatives", icon: Building2, roles: ["admin"], group: "Management" },

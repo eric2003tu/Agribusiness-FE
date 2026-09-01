@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Building2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserAvatar } from "@/components/user-avatar";
 import { useWorkspace } from "@/lib/workspace-store";
 import { ORGANIZATION_TYPE_LABELS, locationById } from "@/lib/mock-data";
@@ -21,7 +25,10 @@ export const Route = createFileRoute("/cooperatives")({
 });
 
 function CooperativesPage() {
-  const { cooperatives, users, endorsements, userById } = useWorkspace();
+  const { cooperatives, users, endorsements, userById, addEndorsement } = useWorkspace();
+  const unverifiedFarmers = users.filter((u) => u.roles.includes("farmer") && !u.isVerified);
+  const [endorsedId, setEndorsedId] = useState(unverifiedFarmers[0]?.id ?? "");
+  const [note, setNote] = useState("");
 
   return (
     <AppShell
@@ -76,6 +83,40 @@ function CooperativesPage() {
             </li>
           ))}
         </ul>
+
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-4">
+          <div className="grid gap-2">
+            <label className="text-xs text-muted-foreground">Vouch for a farmer</label>
+            <Select value={endorsedId} onValueChange={setEndorsedId}>
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {unverifiedFarmers.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Textarea
+            placeholder="Why are you vouching for them?"
+            className="min-w-[16rem] flex-1"
+            rows={1}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+          <Button
+            disabled={!endorsedId || !note.trim()}
+            onClick={() => {
+              addEndorsement({ endorsedId, note });
+              setNote("");
+            }}
+          >
+            Add endorsement
+          </Button>
+        </div>
       </section>
     </AppShell>
   );

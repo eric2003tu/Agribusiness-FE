@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -26,7 +27,9 @@ import {
   notificationLog as seedNotificationLog,
   cooperatives as seedCooperatives,
   endorsements as seedEndorsements,
+  transportOffers as seedTransportOffers,
   districtOf,
+  productById,
   type AggregationGroup,
   type AggregationParticipant,
   type AggregationStatus,
@@ -36,9 +39,11 @@ import {
   type GroupPurchase,
   type GroupPurchasePledge,
   type InputListing,
+  type Language,
   type MarketPriceRecord,
   type Message,
   type MessageThread,
+  type NotificationKind,
   type NotificationLog,
   type ParticipantStatus,
   type ProduceListing,
@@ -47,6 +52,7 @@ import {
   type Role,
   type Transaction,
   type TransactionStatus,
+  type TransportOffer,
   type User,
 } from "./mock-data";
 
@@ -66,6 +72,13 @@ interface WorkspaceContextValue {
   session: User | null;
   ready: boolean;
   signIn: (phone: string, otp: string) => { ok: boolean; error?: string };
+  registerUser: (input: {
+    name: string;
+    phone: string;
+    roles: Role[];
+    preferredLanguage: Language;
+    locationId: string;
+  }) => { ok: boolean; error?: string };
   signOut: () => void;
   setCurrentUserId: (id: string) => void;
   can: (action: Ability) => boolean;
@@ -77,6 +90,11 @@ interface WorkspaceContextValue {
 
   cooperatives: Cooperative[];
   endorsements: Endorsement[];
+  addEndorsement: (input: { endorsedId: string; note: string }) => void;
+
+  transportOffers: TransportOffer[];
+  offersForGroup: (groupId: string) => TransportOffer[];
+  offerTransport: (groupId: string, note?: string) => void;
 
   produceListings: ProduceListing[];
   myListings: ProduceListing[];
@@ -85,6 +103,8 @@ interface WorkspaceContextValue {
   deleteListing: (id: string) => void;
   renewListing: (id: string, expiresAt: string) => void;
   matchingRequestsForListing: (listingId: string) => BuyerRequest[];
+  /** Direct farmer<->buyer purchase off a listing (not via aggregation). */
+  buyListing: (listingId: string, quantity: number, unitPrice?: number) => boolean;
 
   buyerRequests: BuyerRequest[];
   myRequests: BuyerRequest[];
@@ -99,6 +119,8 @@ interface WorkspaceContextValue {
   proposeAggregation: (requestId: string) => void;
   respondToAggregation: (participantId: string, accept: boolean) => void;
   confirmAggregationGroup: (groupId: string) => void;
+  /** Re-runs candidate selection for whatever's still short of the target (§4.3 "Reconcile"). */
+  topUpAggregationGroup: (groupId: string) => void;
 
   inputListings: InputListing[];
   myInputListings: InputListing[];
@@ -180,8 +202,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [allMessages, setAllMessages] = useState<Message[]>(seedMessages);
   const [allPriceRecords, setAllPriceRecords] = useState<MarketPriceRecord[]>(seedMarketPriceRecords);
   const [allNotifications, setAllNotifications] = useState<NotificationLog[]>(seedNotificationLog);
+  const [allEndorsements, setAllEndorsements] = useState<Endorsement[]>(seedEndorsements);
+  const [allTransportOffers, setAllTransportOffers] = useState<TransportOffer[]>(seedTransportOffers);
   const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const alertedListingIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     try {
@@ -248,6 +273,57 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const hasRole = useCallback((role: Role) => currentUser.roles.includes(role), [currentUser]);
 
+  const notify = useCallback(
+    (userId: string, kind: NotificationKind, title: string, detail: string) => {
+      setAllNotifications((prev) => [
+        {
+          id: `N-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          timestamp: new Date().toISOString(),
+          userId,
+          kind,
+          title,
+          detail,
+        },
+        ...prev,
+      ]);
+    },
+    [],
+  );
+
+  const registerUser: WorkspaceContextValue["registerUser"] = useCallback(
+    ({ name, phone, roles, preferredLanguage, locationId }) => {
+      const normalized = phone.trim().replace(/\s+/g, "");
+      if (allUsers.some((u) => u.phone === normalized)) {
+        toast.error("That phone number is already registered", {
+          description: "Try signing in instead.",
+        });
+        return { ok: false, error: "Phone already registered" };
+      }
+      const id = `u-${Date.now()}`;
+      const user: User = {
+        id,
+        name: name.trim(),
+        phone: normalized,
+        roles,
+        preferredLanguage,
+        locationId,
+        isVerified: false,
+        reliabilityScore: 0,
+        avatarColorIndex: allUsers.length % 5,
+        status: "active",
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+      setAllUsers((prev) => [...prev, user]);
+      setCurrentUserIdState(id);
+      persist(id);
+      toast.success(`Welcome to Agribridge, ${user.name.split(" ")[0]}`, {
+        description: "Your account has been created.",
+      });
+      return { ok: true };
+    },
+    [allUsers, persist],
+  );
+
   const updateProfile: WorkspaceContextValue["updateProfile"] = useCallback(
     (fields) => {
       setAllUsers((prev) => prev.map((u) => (u.id === currentUser.id ? { ...u, ...fields } : u)));
@@ -273,9 +349,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString().slice(0, 10),
       };
       setAllProduceListings((prev) => [listing, ...prev]);
+      const matchingBuyers = new Set(
+        allBuyerRequests
+          .filter((r) => r.productId === listing.productId && r.status === "open")
+          .map((r) => r.buyerId),
+      );
+      const productName = productById(listing.productId)?.name ?? "produce";
+      matchingBuyers.forEach((buyerId) =>
+        notify(
+          buyerId,
+          "new_match",
+          "New matching listing",
+          `A new ${productName} listing (${listing.quantity}${listing.unit}) matches your open request.`,
+        ),
+      );
       toast.success("Listing published");
     },
-    [currentUser.id],
+    [currentUser.id, allBuyerRequests, notify],
   );
 
   const updateListing: WorkspaceContextValue["updateListing"] = useCallback((id, fields) => {
@@ -306,6 +396,63 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [allProduceListings, allBuyerRequests],
   );
 
+  const buyListing: WorkspaceContextValue["buyListing"] = useCallback(
+    (listingId, quantity, unitPrice) => {
+      const listing = allProduceListings.find((l) => l.id === listingId);
+      if (!listing) return false;
+      if (listing.status !== "available") {
+        toast.error("This listing is no longer available");
+        return false;
+      }
+      if (quantity <= 0 || quantity > listing.quantity) {
+        toast.error("Invalid quantity", { description: "Check the available quantity." });
+        return false;
+      }
+      const price = listing.negotiable ? unitPrice : (unitPrice ?? listing.unitPrice ?? 0);
+      if (!price || price <= 0) {
+        toast.error("Enter a price", { description: "This listing is negotiable — propose a price." });
+        return false;
+      }
+      const now = new Date().toISOString().slice(0, 10);
+      const transaction: Transaction = {
+        id: `TX-${Date.now()}`,
+        buyerId: currentUser.id,
+        sellerId: listing.sellerId,
+        groupId: null,
+        productId: listing.productId,
+        quantity,
+        unit: listing.unit,
+        unitPrice: price,
+        status: "pending",
+        confirmedBySeller: false,
+        confirmedByBuyer: false,
+        createdAt: now,
+        completedAt: null,
+      };
+      const remaining = listing.quantity - quantity;
+      setAllProduceListings((prev) =>
+        prev.map((l) =>
+          l.id === listingId
+            ? remaining > 0
+              ? { ...l, quantity: remaining }
+              : { ...l, status: "sold" }
+            : l,
+        ),
+      );
+      setAllTransactions((prev) => [transaction, ...prev]);
+      const productName = productById(listing.productId)?.name ?? "produce";
+      notify(
+        listing.sellerId,
+        "transaction",
+        "New order",
+        `${currentUser.name} wants to buy ${quantity}${listing.unit} of ${productName}.`,
+      );
+      toast.success("Order placed", { description: "Track it from your transactions." });
+      return true;
+    },
+    [allProduceListings, currentUser, notify],
+  );
+
   /* -------------------------------- Requests -------------------------------- */
 
   const myRequests = useMemo(
@@ -323,9 +470,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString().slice(0, 10),
       };
       setAllBuyerRequests((prev) => [request, ...prev]);
+      const matchingFarmers = new Set(
+        allProduceListings
+          .filter((l) => l.productId === request.productId && l.status === "available")
+          .map((l) => l.sellerId),
+      );
+      const productName = productById(request.productId)?.name ?? "produce";
+      matchingFarmers.forEach((farmerId) =>
+        notify(
+          farmerId,
+          "new_match",
+          "New matching buyer request",
+          `A buyer needs ${request.quantityNeeded}${request.unit} of ${productName} — your listing may match.`,
+        ),
+      );
       toast.success("Request posted");
     },
-    [currentUser.id],
+    [currentUser.id, allProduceListings, notify],
   );
 
   const updateRequestStatus: WorkspaceContextValue["updateRequestStatus"] = useCallback(
@@ -457,11 +618,86 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setAllProduceListings((prev) =>
         prev.map((l) => (chosen.some((c) => c.id === l.id) ? { ...l, status: "reserved" } : l)),
       );
+      const productName = productById(request.productId)?.name ?? "produce";
+      participants.forEach((p) =>
+        notify(
+          p.farmerId,
+          "aggregation_invite",
+          "Aggregation invite",
+          `A buyer needs ${productName} — confirm your ${p.allocatedQuantity}${group.unit} allocation within 24h.`,
+        ),
+      );
       toast.success(`Aggregation proposed to ${chosen.length} farmer${chosen.length > 1 ? "s" : ""}`, {
         description: "Each farmer has 24h to accept or decline their allocation.",
       });
     },
-    [allBuyerRequests, allAggregationGroups, allAggregationParticipants, allProduceListings, rankListingsForRequest],
+    [allBuyerRequests, allAggregationGroups, allAggregationParticipants, allProduceListings, rankListingsForRequest, notify],
+  );
+
+  const topUpAggregationGroup: WorkspaceContextValue["topUpAggregationGroup"] = useCallback(
+    (groupId) => {
+      const group = allAggregationGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      const participants = allAggregationParticipants.filter((p) => p.groupId === groupId);
+      const covered = participants
+        .filter((p) => p.status !== "declined")
+        .reduce((s, p) => s + p.allocatedQuantity, 0);
+      const shortfall = group.targetQuantity - covered;
+      if (shortfall <= 0) {
+        toast.error("This group already covers its target quantity");
+        return;
+      }
+      const request = allBuyerRequests.find((r) => r.id === group.requestId);
+      if (!request) return;
+      const alreadyIncluded = new Set(participants.map((p) => p.listingId));
+      const candidates = allProduceListings.filter(
+        (l) =>
+          l.productId === request.productId &&
+          l.status === "available" &&
+          !alreadyIncluded.has(l.id),
+      );
+      const ranked = rankListingsForRequest(request, candidates);
+      const chosen: ProduceListing[] = [];
+      let remaining = shortfall;
+      for (const listing of ranked) {
+        if (remaining <= 0) break;
+        chosen.push(listing);
+        remaining -= listing.quantity;
+      }
+      if (chosen.length === 0) {
+        toast.error("No additional farmers found for the shortfall yet");
+        return;
+      }
+      let stillRemaining = shortfall;
+      const newParticipants: AggregationParticipant[] = chosen.map((listing, i) => {
+        const allocated = Math.min(listing.quantity, stillRemaining);
+        stillRemaining -= allocated;
+        return {
+          id: `AP-${Date.now()}-${i}`,
+          groupId,
+          listingId: listing.id,
+          farmerId: listing.sellerId,
+          allocatedQuantity: allocated,
+          status: "pending",
+          agreedUnitPrice: group.unitPrice,
+        };
+      });
+      setAllAggregationParticipants((prev) => [...newParticipants, ...prev]);
+      setAllProduceListings((prev) =>
+        prev.map((l) => (chosen.some((c) => c.id === l.id) ? { ...l, status: "reserved" } : l)),
+      );
+      const productName = productById(request.productId)?.name ?? "produce";
+      newParticipants.forEach((p) =>
+        notify(
+          p.farmerId,
+          "aggregation_invite",
+          "Aggregation invite",
+          `A buyer needs ${productName} — confirm your ${p.allocatedQuantity}${group.unit} allocation within 24h.`,
+        ),
+      );
+      toast.success(`Found ${chosen.length} more farmer${chosen.length > 1 ? "s" : ""} for the shortfall`);
+    },
+    [allAggregationGroups, allAggregationParticipants, allBuyerRequests, allProduceListings, rankListingsForRequest, notify],
   );
 
   const respondToAggregation: WorkspaceContextValue["respondToAggregation"] = useCallback(
@@ -477,13 +713,93 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           l.id === participant.listingId ? { ...l, status: accept ? "reserved" : "available" } : l,
         ),
       );
+      const group = allAggregationGroups.find((g) => g.id === participant.groupId);
+      const buyerId = allBuyerRequests.find((r) => r.id === group?.requestId)?.buyerId;
+      if (buyerId) {
+        notify(
+          buyerId,
+          "aggregation_invite",
+          accept ? "Farmer accepted" : "Farmer declined",
+          `${currentUser.name} ${accept ? "accepted" : "declined"} their ${participant.allocatedQuantity}${group?.unit ?? ""} allocation.`,
+        );
+      }
       toast.success(accept ? "Allocation accepted" : "Allocation declined", {
         description: accept
           ? "You're now part of this aggregation group."
           : "The buyer will be matched with other farmers for the shortfall.",
       });
+
+      if (!accept && group) {
+        // Re-run candidate selection for the shortfall right away (§4.3 "Reconcile"),
+        // computed from this same snapshot so the just-declined participant is excluded.
+        const request = allBuyerRequests.find((r) => r.id === group.requestId);
+        const siblings = allAggregationParticipants.filter(
+          (p) => p.groupId === group.id && p.id !== participantId,
+        );
+        const covered = siblings
+          .filter((p) => p.status !== "declined")
+          .reduce((s, p) => s + p.allocatedQuantity, 0);
+        const shortfall = group.targetQuantity - covered;
+        if (request && shortfall > 0) {
+          const alreadyIncluded = new Set([
+            ...siblings.map((p) => p.listingId),
+            participant.listingId,
+          ]);
+          const candidates = allProduceListings.filter(
+            (l) =>
+              l.productId === request.productId &&
+              l.status === "available" &&
+              !alreadyIncluded.has(l.id),
+          );
+          const ranked = rankListingsForRequest(request, candidates);
+          const chosen: ProduceListing[] = [];
+          let remaining = shortfall;
+          for (const listing of ranked) {
+            if (remaining <= 0) break;
+            chosen.push(listing);
+            remaining -= listing.quantity;
+          }
+          if (chosen.length > 0) {
+            let stillRemaining = shortfall;
+            const newParticipants: AggregationParticipant[] = chosen.map((listing, i) => {
+              const allocated = Math.min(listing.quantity, stillRemaining);
+              stillRemaining -= allocated;
+              return {
+                id: `AP-${Date.now()}-${i}`,
+                groupId: group.id,
+                listingId: listing.id,
+                farmerId: listing.sellerId,
+                allocatedQuantity: allocated,
+                status: "pending",
+                agreedUnitPrice: group.unitPrice,
+              };
+            });
+            setAllAggregationParticipants((prev) => [...newParticipants, ...prev]);
+            setAllProduceListings((prev) =>
+              prev.map((l) => (chosen.some((c) => c.id === l.id) ? { ...l, status: "reserved" } : l)),
+            );
+            const productName = productById(request.productId)?.name ?? "produce";
+            newParticipants.forEach((p) =>
+              notify(
+                p.farmerId,
+                "aggregation_invite",
+                "Aggregation invite",
+                `A buyer needs ${productName} — confirm your ${p.allocatedQuantity}${group.unit} allocation within 24h.`,
+              ),
+            );
+          }
+        }
+      }
     },
-    [allAggregationParticipants],
+    [
+      allAggregationParticipants,
+      allAggregationGroups,
+      allBuyerRequests,
+      allProduceListings,
+      currentUser.name,
+      notify,
+      rankListingsForRequest,
+    ],
   );
 
   const confirmAggregationGroup: WorkspaceContextValue["confirmAggregationGroup"] = useCallback(
@@ -599,9 +915,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         prev.map((l) => (l.id === inputListingId ? { ...l, stockQty: l.stockQty - quantity } : l)),
       );
       setAllTransactions((prev) => [transaction, ...prev]);
+      notify(
+        listing.supplierId,
+        "transaction",
+        "New order",
+        `${currentUser.name} ordered ${quantity}${listing.unit} of ${productById(listing.productId)?.name ?? "input"}.`,
+      );
       toast.success("Order placed", { description: "Track it from your transactions." });
     },
-    [allInputListings, currentUser.id],
+    [allInputListings, currentUser, notify],
   );
 
   /* ---------------------------- Group purchases ---------------------------- */
@@ -640,29 +962,89 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         toast.error("Enter a quantity greater than zero");
         return;
       }
-      setAllPledges((prev) => {
-        const existing = prev.find(
-          (p) => p.groupPurchaseId === groupPurchaseId && p.farmerId === currentUser.id,
+      const groupPurchase = allGroupPurchases.find((g) => g.id === groupPurchaseId);
+      if (!groupPurchase || groupPurchase.status !== "collecting") {
+        toast.error("This group purchase is no longer collecting pledges");
+        return;
+      }
+      const existingForGroup = allPledges.filter((p) => p.groupPurchaseId === groupPurchaseId);
+      const existingMine = existingForGroup.find((p) => p.farmerId === currentUser.id);
+      const nextPledgesForGroup: GroupPurchasePledge[] = existingMine
+        ? existingForGroup.map((p) =>
+            p.id === existingMine.id ? { ...p, pledgedQuantity: p.pledgedQuantity + quantity } : p,
+          )
+        : [
+            ...existingForGroup,
+            {
+              id: `GPP-${Date.now()}`,
+              groupPurchaseId,
+              farmerId: currentUser.id,
+              pledgedQuantity: quantity,
+              computedShareAmount: null,
+            },
+          ];
+      setAllPledges((prev) => [
+        ...nextPledgesForGroup,
+        ...prev.filter((p) => p.groupPurchaseId !== groupPurchaseId),
+      ]);
+      const inputListing = allInputListings.find((l) => l.id === groupPurchase.inputListingId);
+      notify(
+        inputListing?.supplierId ?? "",
+        "group_purchase",
+        "New pledge",
+        `${currentUser.name} pledged ${quantity}${inputListing?.unit ?? ""} toward the group purchase.`,
+      );
+
+      const totalPledged = nextPledgesForGroup.reduce((s, p) => s + p.pledgedQuantity, 0);
+      if (inputListing && totalPledged >= groupPurchase.thresholdQuantity) {
+        const invoiceTotal = totalPledged * inputListing.price;
+        const now = new Date().toISOString().slice(0, 10);
+        const newTransactions: Transaction[] = nextPledgesForGroup.map((p, i) => ({
+          id: `TX-${Date.now()}-${i}`,
+          buyerId: p.farmerId,
+          sellerId: inputListing.supplierId,
+          groupId: groupPurchase.id,
+          productId: inputListing.productId,
+          quantity: p.pledgedQuantity,
+          unit: inputListing.unit,
+          unitPrice: inputListing.price,
+          status: "pending",
+          confirmedBySeller: false,
+          confirmedByBuyer: false,
+          createdAt: now,
+          completedAt: null,
+        }));
+        setAllPledges((prev) =>
+          prev.map((p) =>
+            p.groupPurchaseId === groupPurchaseId
+              ? { ...p, computedShareAmount: (p.pledgedQuantity / totalPledged) * invoiceTotal }
+              : p,
+          ),
         );
-        if (existing) {
-          return prev.map((p) =>
-            p.id === existing.id ? { ...p, pledgedQuantity: p.pledgedQuantity + quantity } : p,
-          );
-        }
-        return [
-          ...prev,
-          {
-            id: `GPP-${Date.now()}`,
-            groupPurchaseId,
-            farmerId: currentUser.id,
-            pledgedQuantity: quantity,
-            computedShareAmount: null,
-          },
-        ];
-      });
-      toast.success("Pledge recorded");
+        setAllGroupPurchases((prev) =>
+          prev.map((g) =>
+            g.id === groupPurchaseId
+              ? { ...g, status: "fulfilled", supplierInvoiceTotal: invoiceTotal }
+              : g,
+          ),
+        );
+        setAllTransactions((prev) => [...newTransactions, ...prev]);
+        nextPledgesForGroup.forEach((p) =>
+          notify(
+            p.farmerId,
+            "group_purchase",
+            "Group purchase fulfilled",
+            `The order for ${inputListing ? productById(inputListing.productId)?.name : "your input"} was placed — your share is being invoiced.`,
+          ),
+        );
+        toast.success("Threshold reached — order placed automatically", {
+          description: "The supplier invoice was split proportionally across every pledge.",
+        });
+      } else {
+        toast.success("Pledge recorded");
+      }
     },
-    [currentUser.id],
+    [currentUser, allGroupPurchases, allPledges, allInputListings, notify],
   );
 
   const fulfillGroupPurchase: WorkspaceContextValue["fulfillGroupPurchase"] = useCallback(
@@ -709,11 +1091,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         ),
       );
       setAllTransactions((prev) => [...newTransactions, ...prev]);
+      pledges.forEach((p) =>
+        notify(
+          p.farmerId,
+          "group_purchase",
+          "Group purchase fulfilled",
+          `The order for ${productById(inputListing.productId)?.name ?? "your input"} was placed — your share is being invoiced.`,
+        ),
+      );
       toast.success("Group purchase fulfilled", {
         description: `Invoice split across ${pledges.length} farmer${pledges.length > 1 ? "s" : ""}.`,
       });
     },
-    [allGroupPurchases, allInputListings, allPledges],
+    [allGroupPurchases, allInputListings, allPledges, notify],
   );
 
   /* ------------------------------ Transactions ------------------------------ */
@@ -752,30 +1142,58 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (bothWillBeConfirmed) {
         setAllUsers((prev) => bumpReliability(bumpReliability(prev, tx.buyerId, 2), tx.sellerId, 2));
       }
+      const otherParty = currentUser.id === tx.buyerId ? tx.sellerId : tx.buyerId;
+      notify(
+        otherParty,
+        "transaction",
+        bothWillBeConfirmed ? "Transaction completed" : "Transaction confirmed",
+        `${currentUser.name} confirmed ${productById(tx.productId)?.name ?? "the order"}${bothWillBeConfirmed ? " — it's now complete." : "."}`,
+      );
       toast.success("Confirmed", {
         description: "Once both sides confirm, the transaction is marked complete.",
       });
     },
-    [allTransactions],
+    [allTransactions, currentUser, notify],
   );
 
-  const raiseDispute: WorkspaceContextValue["raiseDispute"] = useCallback((id, reason) => {
-    setAllTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: "disputed", disputeReason: reason } : t)),
-    );
-    toast.success("Dispute raised", { description: "An admin will review this transaction." });
-  }, []);
+  const raiseDispute: WorkspaceContextValue["raiseDispute"] = useCallback(
+    (id, reason) => {
+      const tx = allTransactions.find((t) => t.id === id);
+      setAllTransactions((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, status: "disputed", disputeReason: reason } : t)),
+      );
+      if (tx) {
+        const otherParty = currentUser.id === tx.buyerId ? tx.sellerId : tx.buyerId;
+        notify(otherParty, "transaction", "Dispute raised", reason);
+        allUsers
+          .filter((u) => u.roles.includes("admin"))
+          .forEach((admin) =>
+            notify(admin.id, "transaction", "Buyer or seller raised a dispute", reason),
+          );
+      }
+      toast.success("Dispute raised", { description: "An admin will review this transaction." });
+    },
+    [allTransactions, allUsers, currentUser, notify],
+  );
 
-  const resolveDispute: WorkspaceContextValue["resolveDispute"] = useCallback((id) => {
-    setAllTransactions((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? { ...t, status: "completed", completedAt: new Date().toISOString().slice(0, 10) }
-          : t,
-      ),
-    );
-    toast.success("Dispute resolved");
-  }, []);
+  const resolveDispute: WorkspaceContextValue["resolveDispute"] = useCallback(
+    (id) => {
+      const tx = allTransactions.find((t) => t.id === id);
+      setAllTransactions((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? { ...t, status: "completed", completedAt: new Date().toISOString().slice(0, 10) }
+            : t,
+        ),
+      );
+      if (tx) {
+        notify(tx.buyerId, "transaction", "Dispute resolved", "An admin marked this transaction complete.");
+        notify(tx.sellerId, "transaction", "Dispute resolved", "An admin marked this transaction complete.");
+      }
+      toast.success("Dispute resolved");
+    },
+    [allTransactions, notify],
+  );
 
   const rateTransaction: WorkspaceContextValue["rateTransaction"] = useCallback(
     (id, score, comment) => {
@@ -876,12 +1294,142 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // Rolling 7-day average per product+district, computed from completed
+  // transactions (source of truth once volume exists) — merged alongside the
+  // manually-curated survey rows the spec calls for while data is sparse.
+  const computedMarketPriceRecords = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const groups = new Map<string, { productId: string; districtId: string; prices: number[] }>();
+    allTransactions
+      .filter((t) => t.status === "completed" && new Date(t.createdAt).getTime() >= cutoff)
+      .forEach((t) => {
+        const seller = allUsers.find((u) => u.id === t.sellerId);
+        const district = districtOf(seller?.locationId);
+        if (!district) return;
+        const key = `${t.productId}__${district.id}`;
+        const entry = groups.get(key) ?? { productId: t.productId, districtId: district.id, prices: [] };
+        entry.prices.push(t.unitPrice);
+        groups.set(key, entry);
+      });
+    const derived: MarketPriceRecord[] = Array.from(groups.entries()).map(([key, g]) => ({
+      id: `computed-${key}`,
+      productId: g.productId,
+      districtId: g.districtId,
+      avgPrice: Math.round(g.prices.reduce((s, p) => s + p, 0) / g.prices.length),
+      sampleDate: new Date().toISOString().slice(0, 10),
+      source: "transaction" as const,
+    }));
+    return [...derived, ...allPriceRecords];
+  }, [allTransactions, allUsers, allPriceRecords]);
+
   /* ------------------------------- Notifications ------------------------------ */
 
   const notificationsForUser = useCallback(
     (userId: string) => allNotifications.filter((n) => n.userId === userId),
     [allNotifications],
   );
+
+  /* ------------------------------ Endorsements ------------------------------ */
+
+  const addEndorsement: WorkspaceContextValue["addEndorsement"] = useCallback(
+    ({ endorsedId, note }) => {
+      const endorsement: Endorsement = {
+        id: `end-${Date.now()}`,
+        endorserId: currentUser.id,
+        endorsedId,
+        note,
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+      setAllEndorsements((prev) => [endorsement, ...prev]);
+      setAllUsers((prev) => bumpReliability(prev, endorsedId, 15));
+      notify(
+        endorsedId,
+        "system",
+        "You were vouched for",
+        `${currentUser.name} vouched for you on Agribridge.`,
+      );
+      toast.success("Endorsement added", { description: "Their reliability tier has been boosted." });
+    },
+    [currentUser, notify],
+  );
+
+  /* ----------------------------- Transport pooling ---------------------------- */
+
+  const offersForGroup = useCallback(
+    (groupId: string) => allTransportOffers.filter((o) => o.groupId === groupId),
+    [allTransportOffers],
+  );
+
+  const offerTransport: WorkspaceContextValue["offerTransport"] = useCallback(
+    (groupId, note) => {
+      const offer: TransportOffer = {
+        id: `TO-${Date.now()}`,
+        groupId,
+        transporterId: currentUser.id,
+        ...(note ? { note } : {}),
+        createdAt: new Date().toISOString(),
+      };
+      setAllTransportOffers((prev) => [offer, ...prev]);
+      const group = allAggregationGroups.find((g) => g.id === groupId);
+      const buyerId = allBuyerRequests.find((r) => r.id === group?.requestId)?.buyerId;
+      if (buyerId) {
+        notify(
+          buyerId,
+          "system",
+          "Transporter available",
+          `${currentUser.name} offered to carry the confirmed aggregation group.`,
+        );
+      }
+      toast.success("Offer sent", { description: "The buyer has been notified." });
+    },
+    [currentUser, allAggregationGroups, allBuyerRequests, notify],
+  );
+
+  /* ------------------------- Scheduled-job simulation ------------------------- */
+  // Mirrors §8.5 (spoilage alerts) and the expiry sweep implied by FR-3: a
+  // client-side interval stands in for the background jobs the real spec runs
+  // server-side, since this build has no server/cron to host them.
+  const produceListingsRef = useRef(allProduceListings);
+  useEffect(() => {
+    produceListingsRef.current = allProduceListings;
+  }, [allProduceListings]);
+
+  useEffect(() => {
+    function runMaintenance() {
+      const today = new Date().toISOString().slice(0, 10);
+      setAllProduceListings((prev) => {
+        let changed = false;
+        const next = prev.map((l) => {
+          if (l.status === "available" && l.expiresAt < today) {
+            changed = true;
+            return { ...l, status: "expired" as const };
+          }
+          return l;
+        });
+        return changed ? next : prev;
+      });
+      const now = Date.now();
+      produceListingsRef.current.forEach((l) => {
+        if (l.status !== "available" || alertedListingIds.current.has(l.id)) return;
+        const shelfLifeDays = productById(l.productId)?.shelfLifeDays;
+        if (!shelfLifeDays) return;
+        const spoilAt = new Date(l.harvestDate).getTime() + shelfLifeDays * 24 * 60 * 60 * 1000;
+        if (spoilAt - now <= 48 * 60 * 60 * 1000 && spoilAt > now) {
+          alertedListingIds.current.add(l.id);
+          notify(
+            l.sellerId,
+            "spoilage_alert",
+            "Listing may spoil soon",
+            `Your ${productById(l.productId)?.name ?? "produce"} listing is nearing its shelf-life window — consider lowering the price.`,
+          );
+        }
+      });
+    }
+    const id = setInterval(runMaintenance, 60_000);
+    runMaintenance();
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ---------------------------------- Admin ---------------------------------- */
 
@@ -911,6 +1459,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     session,
     ready,
     signIn,
+    registerUser,
     signOut,
     setCurrentUserId,
     can,
@@ -919,7 +1468,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     updateProfile,
 
     cooperatives: seedCooperatives,
-    endorsements: seedEndorsements,
+    endorsements: allEndorsements,
+    addEndorsement,
+
+    transportOffers: allTransportOffers,
+    offersForGroup,
+    offerTransport,
 
     produceListings: allProduceListings,
     myListings,
@@ -928,6 +1482,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     deleteListing,
     renewListing,
     matchingRequestsForListing,
+    buyListing,
 
     buyerRequests: allBuyerRequests,
     myRequests,
@@ -942,6 +1497,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     proposeAggregation,
     respondToAggregation,
     confirmAggregationGroup,
+    topUpAggregationGroup,
 
     inputListings: allInputListings,
     myInputListings,
@@ -973,7 +1529,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     startThread,
     sendMessage,
 
-    marketPriceRecords: allPriceRecords,
+    marketPriceRecords: computedMarketPriceRecords,
     addManualPriceRecord,
 
     notifications: allNotifications,
