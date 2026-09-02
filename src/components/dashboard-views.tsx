@@ -305,7 +305,7 @@ export function FarmerDashboard() {
             title="My listings"
             action={
               <Button asChild variant="ghost" size="sm">
-                <Link to="/listings">All listings</Link>
+                <Link to="/my-listings">Manage all</Link>
               </Button>
             }
           >
