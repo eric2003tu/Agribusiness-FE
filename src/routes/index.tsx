@@ -12,8 +12,9 @@ import {
   Sprout,
   Truck,
 } from "lucide-react";
+import { HeroSlideshow } from "@/components/hero-slideshow";
 import { LandingNavbar } from "@/components/landing-navbar";
-import { ProductIllustration } from "@/components/product-illustration";
+import { Photo } from "@/components/photo";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -31,12 +32,11 @@ export const Route = createFileRoute("/")({
         content: "Sell your harvest, buy in bulk, and never guess the price again.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/images/og-image.jpg" },
     ],
   }),
   component: LandingPage,
 });
-
-const HERO_PRODUCTS = ["prod-maize", "prod-tomato", "prod-avocado", "prod-banana", "prod-beans", "prod-onion"];
 
 interface Step {
   number: string;
@@ -103,6 +103,7 @@ const FEATURES: Feature[] = [
 
 interface RoleCard {
   icon: LucideIcon;
+  image: string;
   title: string;
   body: string;
 }
@@ -110,21 +111,25 @@ interface RoleCard {
 const ROLES: RoleCard[] = [
   {
     icon: Sprout,
+    image: "/images/role-farmer.jpg",
     title: "Farmers",
     body: "List your harvest, join bulk aggregation sales, and pool input orders with your cooperative to unlock better prices.",
   },
   {
     icon: ShoppingBasket,
+    image: "/images/role-buyer.jpg",
     title: "Buyers",
     body: "Post what you need and get matched with enough farmers to fill the order — no more chasing individual sellers.",
   },
   {
     icon: Package,
+    image: "/images/role-supplier.jpg",
     title: "Input suppliers",
     body: "Reach farmers directly with fertilizer, seed and pesticide, and fulfil group orders at scale instead of one at a time.",
   },
   {
     icon: Truck,
+    image: "/images/role-transporter.jpg",
     title: "Transporters",
     body: "Pick up shared loads from confirmed aggregation groups instead of arranging transport for one small delivery at a time.",
   },
@@ -165,16 +170,8 @@ function LandingPage() {
           </div>
 
           <div className="relative mx-auto w-full max-w-md">
-            <div className="surface-card grid grid-cols-3 gap-3 p-5">
-              {HERO_PRODUCTS.map((id, i) => (
-                <ProductIllustration
-                  key={id}
-                  productId={id}
-                  className={`aspect-square w-full ${i % 2 === 0 ? "translate-y-2" : "-translate-y-2"}`}
-                />
-              ))}
-            </div>
-            <div className="surface-card absolute -bottom-6 -left-6 hidden items-center gap-3 p-4 sm:flex">
+            <HeroSlideshow />
+            <div className="surface-card pointer-events-none absolute -bottom-6 -left-6 z-20 hidden items-center gap-3 p-4 sm:flex">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success/15 text-success">
                 <ShieldCheck className="size-4" />
               </span>
@@ -195,14 +192,23 @@ function LandingPage() {
             From first listing to completed sale, in three steps.
           </p>
         </div>
-        <div className="mt-12 grid gap-8 md:grid-cols-3">
-          {STEPS.map((step) => (
-            <div key={step.number} className="relative">
-              <span className="text-4xl font-bold text-primary/20">{step.number}</span>
-              <h3 className="mt-2 text-lg font-semibold text-foreground">{step.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{step.body}</p>
-            </div>
-          ))}
+        <div className="mt-12 grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
+          <div className="space-y-8">
+            {STEPS.map((step) => (
+              <div key={step.number} className="flex gap-4">
+                <span className="text-3xl font-bold text-primary/25">{step.number}</span>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">{step.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{step.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Photo
+            src="/images/how-it-works.jpg"
+            alt="Farmers and a buyer agreeing on a bulk produce order"
+            className="aspect-[4/3] w-full rounded-2xl shadow-lg"
+          />
         </div>
       </section>
 
@@ -241,12 +247,15 @@ function LandingPage() {
         </div>
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {ROLES.map((role) => (
-            <div key={role.title} className="surface-card p-6 text-center">
-              <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <role.icon className="size-5" />
-              </span>
-              <h3 className="mt-4 text-base font-semibold text-foreground">{role.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{role.body}</p>
+            <div key={role.title} className="surface-card overflow-hidden text-center">
+              <Photo src={role.image} alt={`${role.title} using Agribridge`} className="aspect-[4/3] w-full" />
+              <div className="p-6">
+                <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <role.icon className="size-5" />
+                </span>
+                <h3 className="mt-4 text-base font-semibold text-foreground">{role.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{role.body}</p>
+              </div>
             </div>
           ))}
         </div>
