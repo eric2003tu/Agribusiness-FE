@@ -8,6 +8,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { ReliabilityBadge } from "@/components/reliability-badge";
 import { GroupPurchaseStatusBadge } from "@/components/status-badge";
 import { ProductIllustration } from "@/components/product-illustration";
+import { CategoryBadge } from "@/routes/inputs";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
 import { locations, productById } from "@/lib/mock-data";
@@ -53,31 +54,45 @@ function InputDetail() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="surface-card p-5">
-            <div className="mb-5">
-              <ProductIllustration productId={listing.productId} className="h-32 w-32" />
+            <div className="flex flex-wrap items-start gap-5">
+              <ProductIllustration productId={listing.productId} className="h-28 w-28" />
+              <div className="min-w-[16rem] flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{product?.name}</p>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {formatRwf(listing.price)}
+                      <span className="text-base font-normal text-muted-foreground">/{listing.unit}</span>
+                    </p>
+                  </div>
+                  <CategoryBadge input={listing} />
+                </div>
+                <dl className="mt-5 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+                  <div>
+                    <dt className="text-muted-foreground">In stock</dt>
+                    <dd className="font-medium text-foreground">
+                      {formatQuantity(listing.stockQty, listing.unit)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Listed</dt>
+                    <dd className="font-medium text-foreground">{listing.createdAt}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Group purchases</dt>
+                    <dd className="font-medium text-foreground">{relatedGroupPurchases.length}</dd>
+                  </div>
+                  <div className="col-span-2 sm:col-span-3">
+                    <dt className="text-muted-foreground">Delivers to</dt>
+                    <dd className="font-medium text-foreground">
+                      {listing.deliveryDistrictIds
+                        .map((id) => locations.find((l) => l.id === id)?.name)
+                        .join(", ") || "Not specified"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </div>
-            <dl className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <dt className="text-muted-foreground">Price</dt>
-                <dd className="font-medium text-foreground">
-                  {formatRwf(listing.price)}/{listing.unit}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">In stock</dt>
-                <dd className="font-medium text-foreground">
-                  {formatQuantity(listing.stockQty, listing.unit)}
-                </dd>
-              </div>
-              <div className="col-span-2">
-                <dt className="text-muted-foreground">Delivers to</dt>
-                <dd className="font-medium text-foreground">
-                  {listing.deliveryDistrictIds
-                    .map((id) => locations.find((l) => l.id === id)?.name)
-                    .join(", ") || "Not specified"}
-                </dd>
-              </div>
-            </dl>
 
             {hasRole("farmer") && (
               <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-border pt-4">
@@ -185,6 +200,26 @@ function InputDetail() {
             <div className="mt-3">
               <ReliabilityBadge score={supplier?.reliabilityScore ?? 0} />
             </div>
+          </section>
+
+          <section className="surface-card p-5">
+            <h2 className="text-sm font-semibold text-foreground">Listing summary</h2>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Delivery districts</dt>
+                <dd className="font-medium text-foreground">{listing.deliveryDistrictIds.length}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Open group purchases</dt>
+                <dd className="font-medium text-foreground">
+                  {relatedGroupPurchases.filter((g) => g.status === "collecting").length}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Unit</dt>
+                <dd className="font-medium text-foreground">{listing.unit}</dd>
+              </div>
+            </dl>
           </section>
         </div>
       </div>

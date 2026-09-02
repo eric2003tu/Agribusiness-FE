@@ -97,61 +97,65 @@ function ListingDetail() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="surface-card p-5">
-            <div className="mb-5 flex gap-2 overflow-x-auto">
-              {listing.photos && listing.photos.length > 0 ? (
-                listing.photos.map((src, i) => (
-                  <img
-                    key={i}
-                    src={src}
-                    alt={`${product?.name ?? "Listing"} photo ${i + 1}`}
-                    className="h-32 w-32 shrink-0 rounded-lg object-cover"
-                  />
-                ))
-              ) : (
-                <ProductIllustration productId={listing.productId} className="h-32 w-32" />
-              )}
+            <div className="flex flex-wrap items-start gap-5">
+              <div className="flex gap-2 overflow-x-auto">
+                {listing.photos && listing.photos.length > 0 ? (
+                  listing.photos.map((src, i) => (
+                    <img
+                      key={i}
+                      src={src}
+                      alt={`${product?.name ?? "Listing"} photo ${i + 1}`}
+                      className="h-28 w-28 shrink-0 rounded-xl object-cover"
+                    />
+                  ))
+                ) : (
+                  <ProductIllustration productId={listing.productId} className="h-28 w-28" />
+                )}
+              </div>
+              <div className="min-w-[16rem] flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Quantity</p>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {formatQuantity(listing.quantity, listing.unit)}
+                    </p>
+                  </div>
+                  <ListingStatusBadge status={listing.status} />
+                </div>
+                <dl className="mt-5 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+                  <div>
+                    <dt className="text-muted-foreground">Price</dt>
+                    <dd className="font-medium text-foreground">
+                      {listing.unitPrice
+                        ? `${formatRwf(listing.unitPrice)}/${listing.unit}${listing.negotiable ? " (negotiable)" : ""}`
+                        : "Negotiable — no asking price set"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Scope</dt>
+                    <dd className="font-medium text-foreground">
+                      {listing.listingScope === "peer" ? "Peer-to-peer" : "Commercial"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Harvest date</dt>
+                    <dd className="font-medium text-foreground">{listing.harvestDate}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Quality grade</dt>
+                    <dd className="font-medium text-foreground">{listing.qualityGrade ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Expires</dt>
+                    <dd className="font-medium text-foreground">{listing.expiresAt}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Location</dt>
+                    <dd className="font-medium text-foreground">{locationLabel(listing.locationId)}</dd>
+                  </div>
+                </dl>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Quantity</p>
-                <p className="text-2xl font-semibold text-foreground">
-                  {formatQuantity(listing.quantity, listing.unit)}
-                </p>
-              </div>
-              <ListingStatusBadge status={listing.status} />
-            </div>
-            <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <dt className="text-muted-foreground">Price</dt>
-                <dd className="font-medium text-foreground">
-                  {listing.unitPrice
-                    ? `${formatRwf(listing.unitPrice)}/${listing.unit}${listing.negotiable ? " (negotiable)" : ""}`
-                    : "Negotiable — no asking price set"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Scope</dt>
-                <dd className="font-medium text-foreground">
-                  {listing.listingScope === "peer" ? "Peer-to-peer" : "Commercial"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Harvest date</dt>
-                <dd className="font-medium text-foreground">{listing.harvestDate}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Quality grade</dt>
-                <dd className="font-medium text-foreground">{listing.qualityGrade ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Expires</dt>
-                <dd className="font-medium text-foreground">{listing.expiresAt}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Location</dt>
-                <dd className="font-medium text-foreground">{locationLabel(listing.locationId)}</dd>
-              </div>
-            </dl>
 
             {editOpen && (
               <div className="mt-5 space-y-4 border-t border-border pt-4">
@@ -391,6 +395,26 @@ function ListingDetail() {
                 </Button>
               </div>
             )}
+          </section>
+
+          <section className="surface-card p-5">
+            <h2 className="text-sm font-semibold text-foreground">Listing summary</h2>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Matching requests</dt>
+                <dd className="font-medium text-foreground">{matches.length}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Scope</dt>
+                <dd className="font-medium text-foreground">
+                  {listing.listingScope === "peer" ? "Peer-to-peer" : "Commercial"}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Unit</dt>
+                <dd className="font-medium text-foreground">{listing.unit}</dd>
+              </div>
+            </dl>
           </section>
         </div>
       </div>

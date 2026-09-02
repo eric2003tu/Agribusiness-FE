@@ -943,20 +943,61 @@ export const messages: Message[] = [
 
 /* --------------------------------- Market prices -------------------------------- */
 
-export const marketPriceRecords: MarketPriceRecord[] = [
-  { id: "MP-1", productId: "prod-maize", districtId: "dist-nyagatare", avgPrice: 318, sampleDate: day(-1), source: "transaction" },
-  { id: "MP-2", productId: "prod-maize", districtId: "dist-musanze", avgPrice: 305, sampleDate: day(-1), source: "manual_survey" },
-  { id: "MP-3", productId: "prod-maize", districtId: "dist-gicumbi", avgPrice: 300, sampleDate: day(-2), source: "manual_survey" },
-  { id: "MP-4", productId: "prod-irish-potato", districtId: "dist-musanze", avgPrice: 248, sampleDate: day(-1), source: "manual_survey" },
-  { id: "MP-5", productId: "prod-irish-potato", districtId: "dist-nyabihu", avgPrice: 230, sampleDate: day(-3), source: "manual_survey" },
-  { id: "MP-6", productId: "prod-tomato", districtId: "dist-huye", avgPrice: 435, sampleDate: day(-1), source: "manual_survey" },
-  { id: "MP-7", productId: "prod-tomato", districtId: "dist-kicukiro", avgPrice: 460, sampleDate: day(-1), source: "manual_survey" },
-  { id: "MP-8", productId: "prod-beans", districtId: "dist-gicumbi", avgPrice: 600, sampleDate: day(-2), source: "manual_survey" },
-  { id: "MP-9", productId: "prod-banana", districtId: "dist-rwamagana", avgPrice: 275, sampleDate: day(-6), source: "transaction" },
-  { id: "MP-10", productId: "prod-cassava", districtId: "dist-nyanza", avgPrice: 178, sampleDate: day(-1), source: "manual_survey" },
-  { id: "MP-11", productId: "prod-rice", districtId: "dist-nyagatare", avgPrice: 520, sampleDate: day(-4), source: "manual_survey" },
-  { id: "MP-12", productId: "prod-avocado", districtId: "dist-huye", avgPrice: 375, sampleDate: day(-1), source: "manual_survey" },
-];
+// Base price per unit — used to generate a full district-by-district price
+// table for every produce product so no product is ever shown with only a
+// couple of places reporting. Each product+district gets its own deterministic
+// (but distinct) price swing, rather than one shared district ranking, so
+// switching products actually shows a different cheap/expensive landscape —
+// not the same shape scaled by a different base price.
+const MARKET_BASE_PRICE: Record<string, number> = {
+  "prod-maize": 310,
+  "prod-rice": 515,
+  "prod-beans": 590,
+  "prod-irish-potato": 240,
+  "prod-cassava": 185,
+  "prod-tomato": 445,
+  "prod-onion": 350,
+  "prod-banana": 270,
+  "prod-avocado": 380,
+  "prod-milk": 410,
+};
+
+function hashSeed(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+// [0, 1) pseudo-random value from an integer seed (mulberry32 — xorshift32
+// clusters badly for these short, similar-prefix hash inputs).
+function pseudoRandom(seed: number): number {
+  let t = (seed + 0x6d2b79f5) >>> 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+function buildMarketPriceRecord(productId: string, district: Location, basePrice: number): MarketPriceRecord {
+  const priceRoll = pseudoRandom(hashSeed(`${productId}__${district.id}__price`));
+  const dateRoll = pseudoRandom(hashSeed(`${productId}__${district.id}__date`));
+  const sourceRoll = pseudoRandom(hashSeed(`${productId}__${district.id}__source`));
+  const factor = 0.7 + priceRoll * 0.7; // wide, product-specific spread (~70%–140% of base)
+  return {
+    id: `MP-${productId}-${district.id}`,
+    productId,
+    districtId: district.id,
+    avgPrice: Math.round((basePrice * factor) / 5) * 5,
+    sampleDate: day(-(1 + Math.floor(dateRoll * 6))),
+    source: sourceRoll > 0.7 ? "transaction" : "manual_survey",
+  };
+}
+
+export const marketPriceRecords: MarketPriceRecord[] = Object.entries(MARKET_BASE_PRICE).flatMap(
+  ([productId, basePrice]) => DISTRICTS.map((district) => buildMarketPriceRecord(productId, district, basePrice)),
+);
 
 /* --------------------------------- Notifications -------------------------------- */
 

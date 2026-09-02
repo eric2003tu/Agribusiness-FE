@@ -37,11 +37,11 @@ const CATEGORY_STYLES: Record<string, string> = {
   "cat-pesticide": "bg-warning/20 text-warning-foreground",
 };
 
-function categoryOf(input: InputListing) {
+export function categoryOf(input: InputListing) {
   return categoryById(productById(input.productId)?.categoryId);
 }
 
-function CategoryBadge({ input }: { input: InputListing }) {
+export function CategoryBadge({ input }: { input: InputListing }) {
   const category = categoryOf(input);
   return (
     <span

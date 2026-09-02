@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Star } from "lucide-react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { CheckCircle2, Circle, Star } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TransactionStatusBadge } from "@/components/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
+import { ReliabilityBadge } from "@/components/reliability-badge";
+import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
 import { productById } from "@/lib/mock-data";
@@ -52,6 +54,8 @@ function TransactionDetail() {
   const alreadyRated = ratingsForUser(otherPartyId).some(
     (r) => r.transactionId === tx.id && r.ratedBy === currentUser.id,
   );
+  const ratingOfBuyer = ratingsForUser(tx.buyerId).find((r) => r.transactionId === tx.id);
+  const ratingOfSeller = ratingsForUser(tx.sellerId).find((r) => r.transactionId === tx.id);
 
   return (
     <AppShell
@@ -61,33 +65,72 @@ function TransactionDetail() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="surface-card p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
-                Total value {formatRwf(tx.quantity * tx.unitPrice)}
-              </p>
-              <TransactionStatusBadge status={tx.status} />
+            <div className="flex flex-wrap items-start gap-5">
+              <ProductIllustration productId={tx.productId} className="h-28 w-28" />
+              <div className="min-w-[16rem] flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{product?.name}</p>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {formatRwf(tx.quantity * tx.unitPrice)}
+                    </p>
+                  </div>
+                  <TransactionStatusBadge status={tx.status} />
+                </div>
+                <dl className="mt-5 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+                  <div>
+                    <dt className="text-muted-foreground">Quantity</dt>
+                    <dd className="font-medium text-foreground">{formatQuantity(tx.quantity, tx.unit)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Unit price</dt>
+                    <dd className="font-medium text-foreground">
+                      {formatRwf(tx.unitPrice)}/{tx.unit}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Created</dt>
+                    <dd className="font-medium text-foreground">{tx.createdAt}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Completed</dt>
+                    <dd className="font-medium text-foreground">{tx.completedAt ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Seller confirmed</dt>
+                    <dd className="mt-0.5 flex items-center gap-1.5 font-medium text-foreground">
+                      {tx.confirmedBySeller ? (
+                        <CheckCircle2 className="size-4 text-success" />
+                      ) : (
+                        <Circle className="size-4 text-muted-foreground" />
+                      )}
+                      {tx.confirmedBySeller ? "Yes" : "Not yet"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Buyer confirmed</dt>
+                    <dd className="mt-0.5 flex items-center gap-1.5 font-medium text-foreground">
+                      {tx.confirmedByBuyer ? (
+                        <CheckCircle2 className="size-4 text-success" />
+                      ) : (
+                        <Circle className="size-4 text-muted-foreground" />
+                      )}
+                      {tx.confirmedByBuyer ? "Yes" : "Not yet"}
+                    </dd>
+                  </div>
+                </dl>
+                {tx.groupId && (
+                  <Button asChild className="mt-4" size="sm" variant="outline">
+                    <Link to="/aggregation/$groupId" params={{ groupId: tx.groupId }}>
+                      Part of aggregation group {tx.groupId}
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </div>
-            <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <dt className="text-muted-foreground">Unit price</dt>
-                <dd className="font-medium text-foreground">{formatRwf(tx.unitPrice)}/{tx.unit}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Created</dt>
-                <dd className="font-medium text-foreground">{tx.createdAt}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Seller confirmed</dt>
-                <dd className="font-medium text-foreground">{tx.confirmedBySeller ? "Yes" : "No"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Buyer confirmed</dt>
-                <dd className="font-medium text-foreground">{tx.confirmedByBuyer ? "Yes" : "No"}</dd>
-              </div>
-            </dl>
 
             {tx.status === "disputed" && tx.disputeReason && (
-              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                 {tx.disputeReason}
               </div>
             )}
@@ -138,6 +181,58 @@ function TransactionDetail() {
             )}
           </section>
 
+          {tx.status === "completed" && (ratingOfBuyer || ratingOfSeller) && (
+            <section className="surface-card p-5">
+              <h2 className="text-sm font-semibold text-foreground">Ratings</h2>
+              <div className="mt-3 space-y-4">
+                {ratingOfSeller && (
+                  <div className="flex items-start gap-3">
+                    <UserAvatar user={buyer} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{buyer?.name} rated the seller</p>
+                      <div className="mt-1 flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star
+                            key={n}
+                            className={cn(
+                              "size-4",
+                              n <= ratingOfSeller.score ? "fill-warning text-warning" : "text-muted-foreground",
+                            )}
+                          />
+                        ))}
+                      </div>
+                      {ratingOfSeller.comment && (
+                        <p className="mt-1 text-sm text-muted-foreground">{ratingOfSeller.comment}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {ratingOfBuyer && (
+                  <div className="flex items-start gap-3">
+                    <UserAvatar user={seller} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{seller?.name} rated the buyer</p>
+                      <div className="mt-1 flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star
+                            key={n}
+                            className={cn(
+                              "size-4",
+                              n <= ratingOfBuyer.score ? "fill-warning text-warning" : "text-muted-foreground",
+                            )}
+                          />
+                        ))}
+                      </div>
+                      {ratingOfBuyer.comment && (
+                        <p className="mt-1 text-sm text-muted-foreground">{ratingOfBuyer.comment}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           {tx.status === "completed" && (isBuyer || isSeller) && !alreadyRated && (
             <section className="surface-card p-5">
               <h2 className="text-sm font-semibold text-foreground">Rate this transaction</h2>
@@ -179,18 +274,40 @@ function TransactionDetail() {
             <h2 className="text-sm font-semibold text-foreground">Parties</h2>
             <div className="mt-3 flex items-center gap-3">
               <UserAvatar user={buyer} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{buyer?.name}</p>
-                <p className="text-xs text-muted-foreground">Buyer</p>
+                <p className="truncate text-xs text-muted-foreground">Buyer · {buyer?.phone}</p>
               </div>
+              <ReliabilityBadge score={buyer?.reliabilityScore ?? 0} />
             </div>
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-3 border-t border-border pt-4">
               <UserAvatar user={seller} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{seller?.name}</p>
-                <p className="text-xs text-muted-foreground">Seller</p>
+                <p className="truncate text-xs text-muted-foreground">Seller · {seller?.phone}</p>
               </div>
+              <ReliabilityBadge score={seller?.reliabilityScore ?? 0} />
             </div>
+          </section>
+
+          <section className="surface-card p-5">
+            <h2 className="text-sm font-semibold text-foreground">Transaction summary</h2>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Transaction ID</dt>
+                <dd className="font-medium text-foreground">{tx.id}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Source</dt>
+                <dd className="font-medium text-foreground">
+                  {tx.groupId ? "Bulk aggregation" : "Direct purchase"}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Unit</dt>
+                <dd className="font-medium text-foreground">{tx.unit}</dd>
+              </div>
+            </dl>
           </section>
         </div>
       </div>
