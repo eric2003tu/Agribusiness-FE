@@ -14,6 +14,7 @@ import {
   Sprout,
   Truck,
   Users,
+  Warehouse,
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,7 +46,8 @@ const NAV: NavItem[] = [
   { title: "Messages", url: "/messages", icon: MessageSquare, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
 
-  { title: "Produce listings", url: "/listings", icon: Sprout, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
+  { title: "My listings", url: "/my-listings", icon: Warehouse, roles: ["farmer"], group: "Marketplace" },
+  { title: "Produce listings", url: "/listings", icon: Sprout, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
   { title: "Buyer requests", url: "/requests", icon: ShoppingBasket, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
   { title: "Aggregation groups", url: "/aggregation", icon: Handshake, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
   { title: "Input marketplace", url: "/inputs", icon: Package, roles: ["farmer", "supplier", "admin"], group: "Marketplace" },

@@ -8,43 +8,23 @@ import { ProductIllustration } from "@/components/product-illustration";
 import { DataTable, type Column, type FilterConfig } from "@/components/data-table";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
-import {
-  DISTRICTS,
-  LISTING_STATUS_LABELS,
-  districtOf,
-  locationLabel,
-  productById,
-  products,
-  type ProduceListing,
-} from "@/lib/mock-data";
+import { LISTING_STATUS_LABELS, locationLabel, productById, type ProduceListing } from "@/lib/mock-data";
 
-const produceProducts = products.filter((p) => p.type === "produce");
-
-export const Route = createFileRoute("/listings")({
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { product?: string | undefined; district?: string | undefined } => ({
-    product: typeof search["product"] === "string" ? search["product"] : undefined,
-    district: typeof search["district"] === "string" ? search["district"] : undefined,
-  }),
+export const Route = createFileRoute("/my-listings")({
   head: () => ({
     meta: [
-      { title: "Produce listings — Agribridge" },
-      {
-        name: "description",
-        content: "Browse and manage farmer produce listings across Rwanda.",
-      },
+      { title: "My listings — Agribridge" },
+      { name: "description", content: "Manage the produce you've listed for sale." },
     ],
   }),
-  component: ListingsPage,
+  component: MyListingsPage,
 });
 
-function ListingsPage() {
+function MyListingsPage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { product: productParam, district: districtParam } = Route.useSearch();
-  const { produceListings, userById, expireListing, can } = useWorkspace();
+  const { myListings, deleteListing, can } = useWorkspace();
 
-  if (pathname !== "/listings") {
+  if (pathname !== "/my-listings") {
     return <Outlet />;
   }
 
@@ -79,12 +59,6 @@ function ListingsPage() {
       exportValue: (l) => locationLabel(l.locationId),
     },
     {
-      key: "seller",
-      header: "Seller",
-      render: (l) => userById(l.sellerId)?.name ?? "—",
-      exportValue: (l) => userById(l.sellerId)?.name ?? "",
-    },
-    {
       key: "scope",
       header: "Scope",
       render: (l) => (l.listingScope === "peer" ? "Peer-to-peer" : "Commercial"),
@@ -112,18 +86,6 @@ function ListingsPage() {
 
   const filters: FilterConfig<ProduceListing>[] = [
     {
-      key: "product",
-      label: "Product",
-      options: produceProducts.map((p) => ({ value: p.id, label: p.name })),
-      match: (l, v) => l.productId === v,
-    },
-    {
-      key: "district",
-      label: "District",
-      options: DISTRICTS.map((d) => ({ value: d.id, label: d.name })),
-      match: (l, v) => districtOf(l.locationId)?.id === v,
-    },
-    {
       key: "status",
       label: "Status",
       options: Object.entries(LISTING_STATUS_LABELS).map(([value, label]) => ({ value, label })),
@@ -142,76 +104,70 @@ function ListingsPage() {
 
   return (
     <AppShell
-      title="Produce listings"
-      description="Every farmer offer currently on the marketplace — browse by product or district to find the best price."
+      allowedRoles={["farmer"]}
+      title="My listings"
+      description="Everything you've listed for sale, in one place."
       actions={
-        (can("manageOwnListings")) && (
-          <Button asChild>
-            <Link to="/listings/new">
-              <Plus className="size-4" /> New listing
-            </Link>
-          </Button>
-        )
+        <Button asChild>
+          <Link to="/listings/new">
+            <Plus className="size-4" /> New listing
+          </Link>
+        </Button>
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={Sprout}
           title="Available"
-          value={produceListings.filter((l) => l.status === "available").length}
+          value={myListings.filter((l) => l.status === "available").length}
           tone="brand"
         />
         <StatCard
           icon={Clock}
           title="Reserved"
-          value={produceListings.filter((l) => l.status === "reserved").length}
+          value={myListings.filter((l) => l.status === "reserved").length}
           tone="warning"
         />
         <StatCard
           icon={CheckCircle2}
           title="Sold"
-          value={produceListings.filter((l) => l.status === "sold").length}
+          value={myListings.filter((l) => l.status === "sold").length}
           tone="success"
         />
         <StatCard
           icon={XCircle}
           title="Expired"
-          value={produceListings.filter((l) => l.status === "expired").length}
+          value={myListings.filter((l) => l.status === "expired").length}
           tone="soft"
         />
       </div>
 
       <DataTable
-        key={`${productParam ?? ""}-${districtParam ?? ""}`}
-        rows={produceListings}
+        rows={myListings}
         columns={columns}
         getRowId={(l) => l.id}
-        searchFields={(l) => `${productById(l.productId)?.name} ${userById(l.sellerId)?.name}`}
+        searchFields={(l) => productById(l.productId)?.name ?? ""}
         filters={filters}
-        initialFilters={{
-          ...(productParam ? { product: productParam } : {}),
-          ...(districtParam ? { district: districtParam } : {}),
-        }}
-        exportFileName="produce-listings"
+        exportFileName="my-listings"
         paginate
-        searchPlaceholder="Search by product or seller…"
+        searchPlaceholder="Search by product…"
         toolbarActions={
-          can("moderate")
+          can("manageOwnListings")
             ? (ids, clear) => (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    ids.forEach((id) => expireListing(id));
+                    ids.forEach((id) => deleteListing(id));
                     clear();
                   }}
                 >
-                  Expire selected
+                  Delete selected
                 </Button>
               )
             : undefined
         }
-        emptyMessage="No listings match your filters."
+        emptyMessage="You haven't listed any produce yet."
       />
     </AppShell>
   );

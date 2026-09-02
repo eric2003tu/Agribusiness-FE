@@ -20,6 +20,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as MarketPricesRouteImport } from './routes/market-prices'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as MyListingsRouteImport } from './routes/my-listings'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RequestsRouteImport } from './routes/requests'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -90,6 +91,11 @@ const MarketPricesRoute = MarketPricesRouteImport.update({
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyListingsRoute = MyListingsRouteImport.update({
+  id: '/my-listings',
+  path: '/my-listings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/logs': typeof LogsRoute
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
+  '/my-listings': typeof MyListingsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/logs': typeof LogsRoute
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
+  '/my-listings': typeof MyListingsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/logs': typeof LogsRoute
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
+  '/my-listings': typeof MyListingsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/market-prices'
     | '/messages'
+    | '/my-listings'
     | '/register'
     | '/requests'
     | '/settings'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/market-prices'
     | '/messages'
+    | '/my-listings'
     | '/register'
     | '/requests'
     | '/settings'
@@ -335,6 +346,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/market-prices'
     | '/messages'
+    | '/my-listings'
     | '/register'
     | '/requests'
     | '/settings'
@@ -365,6 +377,7 @@ export interface RootRouteChildren {
   LogsRoute: typeof LogsRoute
   MarketPricesRoute: typeof MarketPricesRoute
   MessagesRoute: typeof MessagesRoute
+  MyListingsRoute: typeof MyListingsRoute
   RegisterRoute: typeof RegisterRoute
   RequestsRoute: typeof RequestsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
@@ -450,6 +463,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-listings': {
+      id: '/my-listings'
+      path: '/my-listings'
+      fullPath: '/my-listings'
+      preLoaderRoute: typeof MyListingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -666,6 +686,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogsRoute: LogsRoute,
   MarketPricesRoute: MarketPricesRoute,
   MessagesRoute: MessagesRoute,
+  MyListingsRoute: MyListingsRoute,
   RegisterRoute: RegisterRoute,
   RequestsRoute: RequestsRouteWithChildren,
   SettingsRoute: SettingsRoute,
