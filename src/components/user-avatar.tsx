@@ -1,4 +1,4 @@
-import type { Member } from "@/lib/mock-data";
+import type { User } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 const TONES = [
@@ -10,14 +10,14 @@ const TONES = [
 ];
 
 export function UserAvatar({
-  member,
+  user,
   className,
 }: {
-  member?: Member | null | undefined;
+  user?: User | null | undefined;
   className?: string | undefined;
 }) {
-  const initials = member
-    ? member.name
+  const initials = user
+    ? user.name
         .split(" ")
         .map((n) => n[0])
         .slice(0, 2)
@@ -28,7 +28,7 @@ export function UserAvatar({
     <span
       className={cn(
         "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-        member ? TONES[member.avatarColorIndex % TONES.length] : "bg-muted text-muted-foreground",
+        user ? TONES[user.avatarColorIndex % TONES.length] : "bg-muted text-muted-foreground",
         className,
       )}
       aria-hidden

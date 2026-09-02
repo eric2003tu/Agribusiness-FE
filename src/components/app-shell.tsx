@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/lib/workspace-store";
-import { ROLE_LABELS, type Role } from "@/lib/mock-data";
+import { ROLE_LABELS, primaryRole, type Role } from "@/lib/mock-data";
 
 export function AppShell({
   title,
@@ -33,14 +33,14 @@ export function AppShell({
   allowedRoles?: Role[];
   children: ReactNode;
 }) {
-  const { members, currentUser, session, ready, setCurrentUserId, signOut } = useWorkspace();
+  const { users, currentUser, session, ready, setCurrentUserId, signOut } = useWorkspace();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (ready && !session) void navigate({ to: "/", replace: true });
   }, [ready, session, navigate]);
 
-  const allowed = !allowedRoles || allowedRoles.includes(currentUser.role);
+  const allowed = !allowedRoles || currentUser.roles.some((r) => allowedRoles.includes(r));
 
   if (!ready || !session) {
     return (
@@ -69,13 +69,13 @@ export function AppShell({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-10 gap-2 px-2" aria-label="Account menu">
-                  <UserAvatar member={currentUser} />
+                  <UserAvatar user={currentUser} />
                   <span className="hidden min-w-0 text-left sm:block">
                     <span className="block truncate text-sm font-medium text-foreground">
                       {currentUser.name}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {ROLE_LABELS[currentUser.role]}
+                      {ROLE_LABELS[primaryRole(currentUser)]}
                     </span>
                   </span>
                   <ChevronDown className="size-4 text-muted-foreground" />
@@ -84,18 +84,18 @@ export function AppShell({
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel className="font-normal">
                   <p className="text-sm font-medium text-foreground">{currentUser.name}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser.phone}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground">
                   Switch demo user
                 </DropdownMenuLabel>
                 <DropdownMenuRadioGroup value={currentUser.id} onValueChange={setCurrentUserId}>
-                  {members.map((m) => (
-                    <DropdownMenuRadioItem key={m.id} value={m.id}>
-                      <span className="truncate">{m.name}</span>
+                  {users.map((u) => (
+                    <DropdownMenuRadioItem key={u.id} value={u.id}>
+                      <span className="truncate">{u.name}</span>
                       <Badge variant="secondary" className="ml-auto">
-                        {ROLE_LABELS[m.role]}
+                        {ROLE_LABELS[primaryRole(u)]}
                       </Badge>
                     </DropdownMenuRadioItem>
                   ))}
@@ -131,8 +131,8 @@ export function AppShell({
                 <div className="surface-card p-10 text-center">
                   <h2 className="text-lg font-semibold text-foreground">Access restricted</h2>
                   <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                    Your role ({ROLE_LABELS[currentUser.role]}) doesn't have permission to view this
-                    page. Ask an administrator if you need access.
+                    Your role ({ROLE_LABELS[primaryRole(currentUser)]}) doesn't have permission to
+                    view this page. Ask an administrator if you need access.
                   </p>
                 </div>
               )}

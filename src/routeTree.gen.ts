@@ -10,40 +10,47 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as BudgetsRouteImport } from './routes/budgets'
+import { Route as AggregationRouteImport } from './routes/aggregation'
+import { Route as CooperativesRouteImport } from './routes/cooperatives'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as FinanceRouteImport } from './routes/finance'
+import { Route as GroupPurchasesRouteImport } from './routes/group-purchases'
+import { Route as InputsRouteImport } from './routes/inputs'
+import { Route as ListingsRouteImport } from './routes/listings'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogsRouteImport } from './routes/logs'
-import { Route as MaterialRequestsRouteImport } from './routes/material-requests'
-import { Route as MyTasksRouteImport } from './routes/my-tasks'
-import { Route as ObjectivesRouteImport } from './routes/objectives'
-import { Route as OrganizationRouteImport } from './routes/organization'
-import { Route as ProcurementRouteImport } from './routes/procurement'
-import { Route as RequisitionsRouteImport } from './routes/requisitions'
-import { Route as ScheduleRouteImport } from './routes/schedule'
+import { Route as MarketPricesRouteImport } from './routes/market-prices'
+import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as MyListingsRouteImport } from './routes/my-listings'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as RequestsRouteImport } from './routes/requests'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as TasksRouteImport } from './routes/tasks'
-import { Route as TeamRouteImport } from './routes/team'
-import { Route as UniversitiesRouteImport } from './routes/universities'
-import { Route as WorkloadRouteImport } from './routes/workload'
-import { Route as BudgetsBudgetIdRouteImport } from './routes/budgets.$budgetId'
-import { Route as MaterialRequestsRequestIdRouteImport } from './routes/material-requests.$requestId'
-import { Route as MemberMemberIdRouteImport } from './routes/member.$memberId'
-import { Route as ObjectivesNodeIdRouteImport } from './routes/objectives.$nodeId'
-import { Route as OrganizationUnitIdRouteImport } from './routes/organization.$unitId'
-import { Route as OrganizationCampusesRouteImport } from './routes/organization.campuses'
-import { Route as TaskTaskIdRouteImport } from './routes/task.$taskId'
-import { Route as TasksNewRouteImport } from './routes/tasks.new'
+import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as TransportPoolRouteImport } from './routes/transport-pool'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as AggregationGroupIdRouteImport } from './routes/aggregation.$groupId'
+import { Route as GroupPurchasesGroupPurchaseIdRouteImport } from './routes/group-purchases.$groupPurchaseId'
+import { Route as InputsInputIdRouteImport } from './routes/inputs.$inputId'
+import { Route as InputsNewRouteImport } from './routes/inputs.new'
+import { Route as ListingsListingIdRouteImport } from './routes/listings.$listingId'
+import { Route as ListingsNewRouteImport } from './routes/listings.new'
+import { Route as RequestsRequestIdRouteImport } from './routes/requests.$requestId'
+import { Route as RequestsNewRouteImport } from './routes/requests.new'
+import { Route as TransactionsTransactionIdRouteImport } from './routes/transactions.$transactionId'
+import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BudgetsRoute = BudgetsRouteImport.update({
-  id: '/budgets',
-  path: '/budgets',
+const AggregationRoute = AggregationRouteImport.update({
+  id: '/aggregation',
+  path: '/aggregation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CooperativesRoute = CooperativesRouteImport.update({
+  id: '/cooperatives',
+  path: '/cooperatives',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -51,9 +58,19 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FinanceRoute = FinanceRouteImport.update({
-  id: '/finance',
-  path: '/finance',
+const GroupPurchasesRoute = GroupPurchasesRouteImport.update({
+  id: '/group-purchases',
+  path: '/group-purchases',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InputsRoute = InputsRouteImport.update({
+  id: '/inputs',
+  path: '/inputs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListingsRoute = ListingsRouteImport.update({
+  id: '/listings',
+  path: '/listings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -66,39 +83,29 @@ const LogsRoute = LogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MaterialRequestsRoute = MaterialRequestsRouteImport.update({
-  id: '/material-requests',
-  path: '/material-requests',
+const MarketPricesRoute = MarketPricesRouteImport.update({
+  id: '/market-prices',
+  path: '/market-prices',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MyTasksRoute = MyTasksRouteImport.update({
-  id: '/my-tasks',
-  path: '/my-tasks',
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ObjectivesRoute = ObjectivesRouteImport.update({
-  id: '/objectives',
-  path: '/objectives',
+const MyListingsRoute = MyListingsRouteImport.update({
+  id: '/my-listings',
+  path: '/my-listings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OrganizationRoute = OrganizationRouteImport.update({
-  id: '/organization',
-  path: '/organization',
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProcurementRoute = ProcurementRouteImport.update({
-  id: '/procurement',
-  path: '/procurement',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RequisitionsRoute = RequisitionsRouteImport.update({
-  id: '/requisitions',
-  path: '/requisitions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScheduleRoute = ScheduleRouteImport.update({
-  id: '/schedule',
-  path: '/schedule',
+const RequestsRoute = RequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -106,261 +113,277 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TasksRoute = TasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
+const TransactionsRoute = TransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TeamRoute = TeamRouteImport.update({
-  id: '/team',
-  path: '/team',
+const TransportPoolRoute = TransportPoolRouteImport.update({
+  id: '/transport-pool',
+  path: '/transport-pool',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UniversitiesRoute = UniversitiesRouteImport.update({
-  id: '/universities',
-  path: '/universities',
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkloadRoute = WorkloadRouteImport.update({
-  id: '/workload',
-  path: '/workload',
-  getParentRoute: () => rootRouteImport,
+const AggregationGroupIdRoute = AggregationGroupIdRouteImport.update({
+  id: '/$groupId',
+  path: '/$groupId',
+  getParentRoute: () => AggregationRoute,
 } as any)
-const BudgetsBudgetIdRoute = BudgetsBudgetIdRouteImport.update({
-  id: '/$budgetId',
-  path: '/$budgetId',
-  getParentRoute: () => BudgetsRoute,
-} as any)
-const MaterialRequestsRequestIdRoute =
-  MaterialRequestsRequestIdRouteImport.update({
-    id: '/$requestId',
-    path: '/$requestId',
-    getParentRoute: () => MaterialRequestsRoute,
+const GroupPurchasesGroupPurchaseIdRoute =
+  GroupPurchasesGroupPurchaseIdRouteImport.update({
+    id: '/$groupPurchaseId',
+    path: '/$groupPurchaseId',
+    getParentRoute: () => GroupPurchasesRoute,
   } as any)
-const MemberMemberIdRoute = MemberMemberIdRouteImport.update({
-  id: '/member/$memberId',
-  path: '/member/$memberId',
-  getParentRoute: () => rootRouteImport,
+const InputsInputIdRoute = InputsInputIdRouteImport.update({
+  id: '/$inputId',
+  path: '/$inputId',
+  getParentRoute: () => InputsRoute,
 } as any)
-const ObjectivesNodeIdRoute = ObjectivesNodeIdRouteImport.update({
-  id: '/$nodeId',
-  path: '/$nodeId',
-  getParentRoute: () => ObjectivesRoute,
-} as any)
-const OrganizationUnitIdRoute = OrganizationUnitIdRouteImport.update({
-  id: '/$unitId',
-  path: '/$unitId',
-  getParentRoute: () => OrganizationRoute,
-} as any)
-const OrganizationCampusesRoute = OrganizationCampusesRouteImport.update({
-  id: '/campuses',
-  path: '/campuses',
-  getParentRoute: () => OrganizationRoute,
-} as any)
-const TaskTaskIdRoute = TaskTaskIdRouteImport.update({
-  id: '/task/$taskId',
-  path: '/task/$taskId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TasksNewRoute = TasksNewRouteImport.update({
+const InputsNewRoute = InputsNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => TasksRoute,
+  getParentRoute: () => InputsRoute,
+} as any)
+const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
+  id: '/$listingId',
+  path: '/$listingId',
+  getParentRoute: () => ListingsRoute,
+} as any)
+const ListingsNewRoute = ListingsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => ListingsRoute,
+} as any)
+const RequestsRequestIdRoute = RequestsRequestIdRouteImport.update({
+  id: '/$requestId',
+  path: '/$requestId',
+  getParentRoute: () => RequestsRoute,
+} as any)
+const RequestsNewRoute = RequestsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => RequestsRoute,
+} as any)
+const TransactionsTransactionIdRoute =
+  TransactionsTransactionIdRouteImport.update({
+    id: '/$transactionId',
+    path: '/$transactionId',
+    getParentRoute: () => TransactionsRoute,
+  } as any)
+const UsersUserIdRoute = UsersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => UsersRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/budgets': typeof BudgetsRouteWithChildren
+  '/aggregation': typeof AggregationRouteWithChildren
+  '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
-  '/finance': typeof FinanceRoute
+  '/group-purchases': typeof GroupPurchasesRouteWithChildren
+  '/inputs': typeof InputsRouteWithChildren
+  '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
   '/logs': typeof LogsRoute
-  '/material-requests': typeof MaterialRequestsRouteWithChildren
-  '/my-tasks': typeof MyTasksRoute
-  '/objectives': typeof ObjectivesRouteWithChildren
-  '/organization': typeof OrganizationRouteWithChildren
-  '/procurement': typeof ProcurementRoute
-  '/requisitions': typeof RequisitionsRoute
-  '/schedule': typeof ScheduleRoute
+  '/market-prices': typeof MarketPricesRoute
+  '/messages': typeof MessagesRoute
+  '/my-listings': typeof MyListingsRoute
+  '/register': typeof RegisterRoute
+  '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRouteWithChildren
-  '/team': typeof TeamRoute
-  '/universities': typeof UniversitiesRoute
-  '/workload': typeof WorkloadRoute
-  '/budgets/$budgetId': typeof BudgetsBudgetIdRoute
-  '/material-requests/$requestId': typeof MaterialRequestsRequestIdRoute
-  '/member/$memberId': typeof MemberMemberIdRoute
-  '/objectives/$nodeId': typeof ObjectivesNodeIdRoute
-  '/organization/$unitId': typeof OrganizationUnitIdRoute
-  '/organization/campuses': typeof OrganizationCampusesRoute
-  '/task/$taskId': typeof TaskTaskIdRoute
-  '/tasks/new': typeof TasksNewRoute
+  '/transactions': typeof TransactionsRouteWithChildren
+  '/transport-pool': typeof TransportPoolRoute
+  '/users': typeof UsersRouteWithChildren
+  '/aggregation/$groupId': typeof AggregationGroupIdRoute
+  '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
+  '/inputs/$inputId': typeof InputsInputIdRoute
+  '/inputs/new': typeof InputsNewRoute
+  '/listings/$listingId': typeof ListingsListingIdRoute
+  '/listings/new': typeof ListingsNewRoute
+  '/requests/$requestId': typeof RequestsRequestIdRoute
+  '/requests/new': typeof RequestsNewRoute
+  '/transactions/$transactionId': typeof TransactionsTransactionIdRoute
+  '/users/$userId': typeof UsersUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/budgets': typeof BudgetsRouteWithChildren
+  '/aggregation': typeof AggregationRouteWithChildren
+  '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
-  '/finance': typeof FinanceRoute
+  '/group-purchases': typeof GroupPurchasesRouteWithChildren
+  '/inputs': typeof InputsRouteWithChildren
+  '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
   '/logs': typeof LogsRoute
-  '/material-requests': typeof MaterialRequestsRouteWithChildren
-  '/my-tasks': typeof MyTasksRoute
-  '/objectives': typeof ObjectivesRouteWithChildren
-  '/organization': typeof OrganizationRouteWithChildren
-  '/procurement': typeof ProcurementRoute
-  '/requisitions': typeof RequisitionsRoute
-  '/schedule': typeof ScheduleRoute
+  '/market-prices': typeof MarketPricesRoute
+  '/messages': typeof MessagesRoute
+  '/my-listings': typeof MyListingsRoute
+  '/register': typeof RegisterRoute
+  '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRouteWithChildren
-  '/team': typeof TeamRoute
-  '/universities': typeof UniversitiesRoute
-  '/workload': typeof WorkloadRoute
-  '/budgets/$budgetId': typeof BudgetsBudgetIdRoute
-  '/material-requests/$requestId': typeof MaterialRequestsRequestIdRoute
-  '/member/$memberId': typeof MemberMemberIdRoute
-  '/objectives/$nodeId': typeof ObjectivesNodeIdRoute
-  '/organization/$unitId': typeof OrganizationUnitIdRoute
-  '/organization/campuses': typeof OrganizationCampusesRoute
-  '/task/$taskId': typeof TaskTaskIdRoute
-  '/tasks/new': typeof TasksNewRoute
+  '/transactions': typeof TransactionsRouteWithChildren
+  '/transport-pool': typeof TransportPoolRoute
+  '/users': typeof UsersRouteWithChildren
+  '/aggregation/$groupId': typeof AggregationGroupIdRoute
+  '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
+  '/inputs/$inputId': typeof InputsInputIdRoute
+  '/inputs/new': typeof InputsNewRoute
+  '/listings/$listingId': typeof ListingsListingIdRoute
+  '/listings/new': typeof ListingsNewRoute
+  '/requests/$requestId': typeof RequestsRequestIdRoute
+  '/requests/new': typeof RequestsNewRoute
+  '/transactions/$transactionId': typeof TransactionsTransactionIdRoute
+  '/users/$userId': typeof UsersUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/budgets': typeof BudgetsRouteWithChildren
+  '/aggregation': typeof AggregationRouteWithChildren
+  '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
-  '/finance': typeof FinanceRoute
+  '/group-purchases': typeof GroupPurchasesRouteWithChildren
+  '/inputs': typeof InputsRouteWithChildren
+  '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
   '/logs': typeof LogsRoute
-  '/material-requests': typeof MaterialRequestsRouteWithChildren
-  '/my-tasks': typeof MyTasksRoute
-  '/objectives': typeof ObjectivesRouteWithChildren
-  '/organization': typeof OrganizationRouteWithChildren
-  '/procurement': typeof ProcurementRoute
-  '/requisitions': typeof RequisitionsRoute
-  '/schedule': typeof ScheduleRoute
+  '/market-prices': typeof MarketPricesRoute
+  '/messages': typeof MessagesRoute
+  '/my-listings': typeof MyListingsRoute
+  '/register': typeof RegisterRoute
+  '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRouteWithChildren
-  '/team': typeof TeamRoute
-  '/universities': typeof UniversitiesRoute
-  '/workload': typeof WorkloadRoute
-  '/budgets/$budgetId': typeof BudgetsBudgetIdRoute
-  '/material-requests/$requestId': typeof MaterialRequestsRequestIdRoute
-  '/member/$memberId': typeof MemberMemberIdRoute
-  '/objectives/$nodeId': typeof ObjectivesNodeIdRoute
-  '/organization/$unitId': typeof OrganizationUnitIdRoute
-  '/organization/campuses': typeof OrganizationCampusesRoute
-  '/task/$taskId': typeof TaskTaskIdRoute
-  '/tasks/new': typeof TasksNewRoute
+  '/transactions': typeof TransactionsRouteWithChildren
+  '/transport-pool': typeof TransportPoolRoute
+  '/users': typeof UsersRouteWithChildren
+  '/aggregation/$groupId': typeof AggregationGroupIdRoute
+  '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
+  '/inputs/$inputId': typeof InputsInputIdRoute
+  '/inputs/new': typeof InputsNewRoute
+  '/listings/$listingId': typeof ListingsListingIdRoute
+  '/listings/new': typeof ListingsNewRoute
+  '/requests/$requestId': typeof RequestsRequestIdRoute
+  '/requests/new': typeof RequestsNewRoute
+  '/transactions/$transactionId': typeof TransactionsTransactionIdRoute
+  '/users/$userId': typeof UsersUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/budgets'
+    | '/aggregation'
+    | '/cooperatives'
     | '/dashboard'
-    | '/finance'
+    | '/group-purchases'
+    | '/inputs'
+    | '/listings'
     | '/login'
     | '/logs'
-    | '/material-requests'
-    | '/my-tasks'
-    | '/objectives'
-    | '/organization'
-    | '/procurement'
-    | '/requisitions'
-    | '/schedule'
+    | '/market-prices'
+    | '/messages'
+    | '/my-listings'
+    | '/register'
+    | '/requests'
     | '/settings'
-    | '/tasks'
-    | '/team'
-    | '/universities'
-    | '/workload'
-    | '/budgets/$budgetId'
-    | '/material-requests/$requestId'
-    | '/member/$memberId'
-    | '/objectives/$nodeId'
-    | '/organization/$unitId'
-    | '/organization/campuses'
-    | '/task/$taskId'
-    | '/tasks/new'
+    | '/transactions'
+    | '/transport-pool'
+    | '/users'
+    | '/aggregation/$groupId'
+    | '/group-purchases/$groupPurchaseId'
+    | '/inputs/$inputId'
+    | '/inputs/new'
+    | '/listings/$listingId'
+    | '/listings/new'
+    | '/requests/$requestId'
+    | '/requests/new'
+    | '/transactions/$transactionId'
+    | '/users/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/budgets'
+    | '/aggregation'
+    | '/cooperatives'
     | '/dashboard'
-    | '/finance'
+    | '/group-purchases'
+    | '/inputs'
+    | '/listings'
     | '/login'
     | '/logs'
-    | '/material-requests'
-    | '/my-tasks'
-    | '/objectives'
-    | '/organization'
-    | '/procurement'
-    | '/requisitions'
-    | '/schedule'
+    | '/market-prices'
+    | '/messages'
+    | '/my-listings'
+    | '/register'
+    | '/requests'
     | '/settings'
-    | '/tasks'
-    | '/team'
-    | '/universities'
-    | '/workload'
-    | '/budgets/$budgetId'
-    | '/material-requests/$requestId'
-    | '/member/$memberId'
-    | '/objectives/$nodeId'
-    | '/organization/$unitId'
-    | '/organization/campuses'
-    | '/task/$taskId'
-    | '/tasks/new'
+    | '/transactions'
+    | '/transport-pool'
+    | '/users'
+    | '/aggregation/$groupId'
+    | '/group-purchases/$groupPurchaseId'
+    | '/inputs/$inputId'
+    | '/inputs/new'
+    | '/listings/$listingId'
+    | '/listings/new'
+    | '/requests/$requestId'
+    | '/requests/new'
+    | '/transactions/$transactionId'
+    | '/users/$userId'
   id:
     | '__root__'
     | '/'
-    | '/budgets'
+    | '/aggregation'
+    | '/cooperatives'
     | '/dashboard'
-    | '/finance'
+    | '/group-purchases'
+    | '/inputs'
+    | '/listings'
     | '/login'
     | '/logs'
-    | '/material-requests'
-    | '/my-tasks'
-    | '/objectives'
-    | '/organization'
-    | '/procurement'
-    | '/requisitions'
-    | '/schedule'
+    | '/market-prices'
+    | '/messages'
+    | '/my-listings'
+    | '/register'
+    | '/requests'
     | '/settings'
-    | '/tasks'
-    | '/team'
-    | '/universities'
-    | '/workload'
-    | '/budgets/$budgetId'
-    | '/material-requests/$requestId'
-    | '/member/$memberId'
-    | '/objectives/$nodeId'
-    | '/organization/$unitId'
-    | '/organization/campuses'
-    | '/task/$taskId'
-    | '/tasks/new'
+    | '/transactions'
+    | '/transport-pool'
+    | '/users'
+    | '/aggregation/$groupId'
+    | '/group-purchases/$groupPurchaseId'
+    | '/inputs/$inputId'
+    | '/inputs/new'
+    | '/listings/$listingId'
+    | '/listings/new'
+    | '/requests/$requestId'
+    | '/requests/new'
+    | '/transactions/$transactionId'
+    | '/users/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  BudgetsRoute: typeof BudgetsRouteWithChildren
+  AggregationRoute: typeof AggregationRouteWithChildren
+  CooperativesRoute: typeof CooperativesRoute
   DashboardRoute: typeof DashboardRoute
-  FinanceRoute: typeof FinanceRoute
+  GroupPurchasesRoute: typeof GroupPurchasesRouteWithChildren
+  InputsRoute: typeof InputsRouteWithChildren
+  ListingsRoute: typeof ListingsRouteWithChildren
   LoginRoute: typeof LoginRoute
   LogsRoute: typeof LogsRoute
-  MaterialRequestsRoute: typeof MaterialRequestsRouteWithChildren
-  MyTasksRoute: typeof MyTasksRoute
-  ObjectivesRoute: typeof ObjectivesRouteWithChildren
-  OrganizationRoute: typeof OrganizationRouteWithChildren
-  ProcurementRoute: typeof ProcurementRoute
-  RequisitionsRoute: typeof RequisitionsRoute
-  ScheduleRoute: typeof ScheduleRoute
+  MarketPricesRoute: typeof MarketPricesRoute
+  MessagesRoute: typeof MessagesRoute
+  MyListingsRoute: typeof MyListingsRoute
+  RegisterRoute: typeof RegisterRoute
+  RequestsRoute: typeof RequestsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
-  TasksRoute: typeof TasksRouteWithChildren
-  TeamRoute: typeof TeamRoute
-  UniversitiesRoute: typeof UniversitiesRoute
-  WorkloadRoute: typeof WorkloadRoute
-  MemberMemberIdRoute: typeof MemberMemberIdRoute
-  TaskTaskIdRoute: typeof TaskTaskIdRoute
+  TransactionsRoute: typeof TransactionsRouteWithChildren
+  TransportPoolRoute: typeof TransportPoolRoute
+  UsersRoute: typeof UsersRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -372,11 +395,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/budgets': {
-      id: '/budgets'
-      path: '/budgets'
-      fullPath: '/budgets'
-      preLoaderRoute: typeof BudgetsRouteImport
+    '/aggregation': {
+      id: '/aggregation'
+      path: '/aggregation'
+      fullPath: '/aggregation'
+      preLoaderRoute: typeof AggregationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cooperatives': {
+      id: '/cooperatives'
+      path: '/cooperatives'
+      fullPath: '/cooperatives'
+      preLoaderRoute: typeof CooperativesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -386,11 +416,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/finance': {
-      id: '/finance'
-      path: '/finance'
-      fullPath: '/finance'
-      preLoaderRoute: typeof FinanceRouteImport
+    '/group-purchases': {
+      id: '/group-purchases'
+      path: '/group-purchases'
+      fullPath: '/group-purchases'
+      preLoaderRoute: typeof GroupPurchasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inputs': {
+      id: '/inputs'
+      path: '/inputs'
+      fullPath: '/inputs'
+      preLoaderRoute: typeof InputsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listings': {
+      id: '/listings'
+      path: '/listings'
+      fullPath: '/listings'
+      preLoaderRoute: typeof ListingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -407,53 +451,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LogsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/material-requests': {
-      id: '/material-requests'
-      path: '/material-requests'
-      fullPath: '/material-requests'
-      preLoaderRoute: typeof MaterialRequestsRouteImport
+    '/market-prices': {
+      id: '/market-prices'
+      path: '/market-prices'
+      fullPath: '/market-prices'
+      preLoaderRoute: typeof MarketPricesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/my-tasks': {
-      id: '/my-tasks'
-      path: '/my-tasks'
-      fullPath: '/my-tasks'
-      preLoaderRoute: typeof MyTasksRouteImport
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/objectives': {
-      id: '/objectives'
-      path: '/objectives'
-      fullPath: '/objectives'
-      preLoaderRoute: typeof ObjectivesRouteImport
+    '/my-listings': {
+      id: '/my-listings'
+      path: '/my-listings'
+      fullPath: '/my-listings'
+      preLoaderRoute: typeof MyListingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/organization': {
-      id: '/organization'
-      path: '/organization'
-      fullPath: '/organization'
-      preLoaderRoute: typeof OrganizationRouteImport
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/procurement': {
-      id: '/procurement'
-      path: '/procurement'
-      fullPath: '/procurement'
-      preLoaderRoute: typeof ProcurementRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/requisitions': {
-      id: '/requisitions'
-      path: '/requisitions'
-      fullPath: '/requisitions'
-      preLoaderRoute: typeof RequisitionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/schedule': {
-      id: '/schedule'
-      path: '/schedule'
-      fullPath: '/schedule'
-      preLoaderRoute: typeof ScheduleRouteImport
+    '/requests': {
+      id: '/requests'
+      path: '/requests'
+      fullPath: '/requests'
+      preLoaderRoute: typeof RequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -463,172 +493,206 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tasks': {
-      id: '/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof TasksRouteImport
+    '/transactions': {
+      id: '/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof TransactionsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/team': {
-      id: '/team'
-      path: '/team'
-      fullPath: '/team'
-      preLoaderRoute: typeof TeamRouteImport
+    '/transport-pool': {
+      id: '/transport-pool'
+      path: '/transport-pool'
+      fullPath: '/transport-pool'
+      preLoaderRoute: typeof TransportPoolRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/universities': {
-      id: '/universities'
-      path: '/universities'
-      fullPath: '/universities'
-      preLoaderRoute: typeof UniversitiesRouteImport
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workload': {
-      id: '/workload'
-      path: '/workload'
-      fullPath: '/workload'
-      preLoaderRoute: typeof WorkloadRouteImport
-      parentRoute: typeof rootRouteImport
+    '/aggregation/$groupId': {
+      id: '/aggregation/$groupId'
+      path: '/$groupId'
+      fullPath: '/aggregation/$groupId'
+      preLoaderRoute: typeof AggregationGroupIdRouteImport
+      parentRoute: typeof AggregationRoute
     }
-    '/budgets/$budgetId': {
-      id: '/budgets/$budgetId'
-      path: '/$budgetId'
-      fullPath: '/budgets/$budgetId'
-      preLoaderRoute: typeof BudgetsBudgetIdRouteImport
-      parentRoute: typeof BudgetsRoute
+    '/group-purchases/$groupPurchaseId': {
+      id: '/group-purchases/$groupPurchaseId'
+      path: '/$groupPurchaseId'
+      fullPath: '/group-purchases/$groupPurchaseId'
+      preLoaderRoute: typeof GroupPurchasesGroupPurchaseIdRouteImport
+      parentRoute: typeof GroupPurchasesRoute
     }
-    '/material-requests/$requestId': {
-      id: '/material-requests/$requestId'
-      path: '/$requestId'
-      fullPath: '/material-requests/$requestId'
-      preLoaderRoute: typeof MaterialRequestsRequestIdRouteImport
-      parentRoute: typeof MaterialRequestsRoute
+    '/inputs/$inputId': {
+      id: '/inputs/$inputId'
+      path: '/$inputId'
+      fullPath: '/inputs/$inputId'
+      preLoaderRoute: typeof InputsInputIdRouteImport
+      parentRoute: typeof InputsRoute
     }
-    '/member/$memberId': {
-      id: '/member/$memberId'
-      path: '/member/$memberId'
-      fullPath: '/member/$memberId'
-      preLoaderRoute: typeof MemberMemberIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/objectives/$nodeId': {
-      id: '/objectives/$nodeId'
-      path: '/$nodeId'
-      fullPath: '/objectives/$nodeId'
-      preLoaderRoute: typeof ObjectivesNodeIdRouteImport
-      parentRoute: typeof ObjectivesRoute
-    }
-    '/organization/$unitId': {
-      id: '/organization/$unitId'
-      path: '/$unitId'
-      fullPath: '/organization/$unitId'
-      preLoaderRoute: typeof OrganizationUnitIdRouteImport
-      parentRoute: typeof OrganizationRoute
-    }
-    '/organization/campuses': {
-      id: '/organization/campuses'
-      path: '/campuses'
-      fullPath: '/organization/campuses'
-      preLoaderRoute: typeof OrganizationCampusesRouteImport
-      parentRoute: typeof OrganizationRoute
-    }
-    '/task/$taskId': {
-      id: '/task/$taskId'
-      path: '/task/$taskId'
-      fullPath: '/task/$taskId'
-      preLoaderRoute: typeof TaskTaskIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tasks/new': {
-      id: '/tasks/new'
+    '/inputs/new': {
+      id: '/inputs/new'
       path: '/new'
-      fullPath: '/tasks/new'
-      preLoaderRoute: typeof TasksNewRouteImport
-      parentRoute: typeof TasksRoute
+      fullPath: '/inputs/new'
+      preLoaderRoute: typeof InputsNewRouteImport
+      parentRoute: typeof InputsRoute
+    }
+    '/listings/$listingId': {
+      id: '/listings/$listingId'
+      path: '/$listingId'
+      fullPath: '/listings/$listingId'
+      preLoaderRoute: typeof ListingsListingIdRouteImport
+      parentRoute: typeof ListingsRoute
+    }
+    '/listings/new': {
+      id: '/listings/new'
+      path: '/new'
+      fullPath: '/listings/new'
+      preLoaderRoute: typeof ListingsNewRouteImport
+      parentRoute: typeof ListingsRoute
+    }
+    '/requests/$requestId': {
+      id: '/requests/$requestId'
+      path: '/$requestId'
+      fullPath: '/requests/$requestId'
+      preLoaderRoute: typeof RequestsRequestIdRouteImport
+      parentRoute: typeof RequestsRoute
+    }
+    '/requests/new': {
+      id: '/requests/new'
+      path: '/new'
+      fullPath: '/requests/new'
+      preLoaderRoute: typeof RequestsNewRouteImport
+      parentRoute: typeof RequestsRoute
+    }
+    '/transactions/$transactionId': {
+      id: '/transactions/$transactionId'
+      path: '/$transactionId'
+      fullPath: '/transactions/$transactionId'
+      preLoaderRoute: typeof TransactionsTransactionIdRouteImport
+      parentRoute: typeof TransactionsRoute
+    }
+    '/users/$userId': {
+      id: '/users/$userId'
+      path: '/$userId'
+      fullPath: '/users/$userId'
+      preLoaderRoute: typeof UsersUserIdRouteImport
+      parentRoute: typeof UsersRoute
     }
   }
 }
 
-interface BudgetsRouteChildren {
-  BudgetsBudgetIdRoute: typeof BudgetsBudgetIdRoute
+interface AggregationRouteChildren {
+  AggregationGroupIdRoute: typeof AggregationGroupIdRoute
 }
 
-const BudgetsRouteChildren: BudgetsRouteChildren = {
-  BudgetsBudgetIdRoute: BudgetsBudgetIdRoute,
+const AggregationRouteChildren: AggregationRouteChildren = {
+  AggregationGroupIdRoute: AggregationGroupIdRoute,
 }
 
-const BudgetsRouteWithChildren =
-  BudgetsRoute._addFileChildren(BudgetsRouteChildren)
-
-interface MaterialRequestsRouteChildren {
-  MaterialRequestsRequestIdRoute: typeof MaterialRequestsRequestIdRoute
-}
-
-const MaterialRequestsRouteChildren: MaterialRequestsRouteChildren = {
-  MaterialRequestsRequestIdRoute: MaterialRequestsRequestIdRoute,
-}
-
-const MaterialRequestsRouteWithChildren =
-  MaterialRequestsRoute._addFileChildren(MaterialRequestsRouteChildren)
-
-interface ObjectivesRouteChildren {
-  ObjectivesNodeIdRoute: typeof ObjectivesNodeIdRoute
-}
-
-const ObjectivesRouteChildren: ObjectivesRouteChildren = {
-  ObjectivesNodeIdRoute: ObjectivesNodeIdRoute,
-}
-
-const ObjectivesRouteWithChildren = ObjectivesRoute._addFileChildren(
-  ObjectivesRouteChildren,
+const AggregationRouteWithChildren = AggregationRoute._addFileChildren(
+  AggregationRouteChildren,
 )
 
-interface OrganizationRouteChildren {
-  OrganizationUnitIdRoute: typeof OrganizationUnitIdRoute
-  OrganizationCampusesRoute: typeof OrganizationCampusesRoute
+interface GroupPurchasesRouteChildren {
+  GroupPurchasesGroupPurchaseIdRoute: typeof GroupPurchasesGroupPurchaseIdRoute
 }
 
-const OrganizationRouteChildren: OrganizationRouteChildren = {
-  OrganizationUnitIdRoute: OrganizationUnitIdRoute,
-  OrganizationCampusesRoute: OrganizationCampusesRoute,
+const GroupPurchasesRouteChildren: GroupPurchasesRouteChildren = {
+  GroupPurchasesGroupPurchaseIdRoute: GroupPurchasesGroupPurchaseIdRoute,
 }
 
-const OrganizationRouteWithChildren = OrganizationRoute._addFileChildren(
-  OrganizationRouteChildren,
+const GroupPurchasesRouteWithChildren = GroupPurchasesRoute._addFileChildren(
+  GroupPurchasesRouteChildren,
 )
 
-interface TasksRouteChildren {
-  TasksNewRoute: typeof TasksNewRoute
+interface InputsRouteChildren {
+  InputsInputIdRoute: typeof InputsInputIdRoute
+  InputsNewRoute: typeof InputsNewRoute
 }
 
-const TasksRouteChildren: TasksRouteChildren = {
-  TasksNewRoute: TasksNewRoute,
+const InputsRouteChildren: InputsRouteChildren = {
+  InputsInputIdRoute: InputsInputIdRoute,
+  InputsNewRoute: InputsNewRoute,
 }
 
-const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
+const InputsRouteWithChildren =
+  InputsRoute._addFileChildren(InputsRouteChildren)
+
+interface ListingsRouteChildren {
+  ListingsListingIdRoute: typeof ListingsListingIdRoute
+  ListingsNewRoute: typeof ListingsNewRoute
+}
+
+const ListingsRouteChildren: ListingsRouteChildren = {
+  ListingsListingIdRoute: ListingsListingIdRoute,
+  ListingsNewRoute: ListingsNewRoute,
+}
+
+const ListingsRouteWithChildren = ListingsRoute._addFileChildren(
+  ListingsRouteChildren,
+)
+
+interface RequestsRouteChildren {
+  RequestsRequestIdRoute: typeof RequestsRequestIdRoute
+  RequestsNewRoute: typeof RequestsNewRoute
+}
+
+const RequestsRouteChildren: RequestsRouteChildren = {
+  RequestsRequestIdRoute: RequestsRequestIdRoute,
+  RequestsNewRoute: RequestsNewRoute,
+}
+
+const RequestsRouteWithChildren = RequestsRoute._addFileChildren(
+  RequestsRouteChildren,
+)
+
+interface TransactionsRouteChildren {
+  TransactionsTransactionIdRoute: typeof TransactionsTransactionIdRoute
+}
+
+const TransactionsRouteChildren: TransactionsRouteChildren = {
+  TransactionsTransactionIdRoute: TransactionsTransactionIdRoute,
+}
+
+const TransactionsRouteWithChildren = TransactionsRoute._addFileChildren(
+  TransactionsRouteChildren,
+)
+
+interface UsersRouteChildren {
+  UsersUserIdRoute: typeof UsersUserIdRoute
+}
+
+const UsersRouteChildren: UsersRouteChildren = {
+  UsersUserIdRoute: UsersUserIdRoute,
+}
+
+const UsersRouteWithChildren = UsersRoute._addFileChildren(UsersRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  BudgetsRoute: BudgetsRouteWithChildren,
+  AggregationRoute: AggregationRouteWithChildren,
+  CooperativesRoute: CooperativesRoute,
   DashboardRoute: DashboardRoute,
-  FinanceRoute: FinanceRoute,
+  GroupPurchasesRoute: GroupPurchasesRouteWithChildren,
+  InputsRoute: InputsRouteWithChildren,
+  ListingsRoute: ListingsRouteWithChildren,
   LoginRoute: LoginRoute,
   LogsRoute: LogsRoute,
-  MaterialRequestsRoute: MaterialRequestsRouteWithChildren,
-  MyTasksRoute: MyTasksRoute,
-  ObjectivesRoute: ObjectivesRouteWithChildren,
-  OrganizationRoute: OrganizationRouteWithChildren,
-  ProcurementRoute: ProcurementRoute,
-  RequisitionsRoute: RequisitionsRoute,
-  ScheduleRoute: ScheduleRoute,
+  MarketPricesRoute: MarketPricesRoute,
+  MessagesRoute: MessagesRoute,
+  MyListingsRoute: MyListingsRoute,
+  RegisterRoute: RegisterRoute,
+  RequestsRoute: RequestsRouteWithChildren,
   SettingsRoute: SettingsRoute,
-  TasksRoute: TasksRouteWithChildren,
-  TeamRoute: TeamRoute,
-  UniversitiesRoute: UniversitiesRoute,
-  WorkloadRoute: WorkloadRoute,
-  MemberMemberIdRoute: MemberMemberIdRoute,
-  TaskTaskIdRoute: TaskTaskIdRoute,
+  TransactionsRoute: TransactionsRouteWithChildren,
+  TransportPoolRoute: TransportPoolRoute,
+  UsersRoute: UsersRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

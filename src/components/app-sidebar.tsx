@@ -1,19 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  Boxes,
   Building2,
-  CalendarDays,
-  CheckSquare,
-  ClipboardList,
-  HandCoins,
-  History,
+  Handshake,
   LayoutDashboard,
+  LineChart,
+  MessageSquare,
   Package,
-  ShoppingCart,
-  Target,
-  Users,
-  Activity,
+  ScrollText,
   Settings,
-  Wallet,
+  ShoppingBasket,
+  ShoppingCart,
+  Sprout,
+  Truck,
+  Users,
+  Warehouse,
 } from "lucide-react";
 import {
   Sidebar,
@@ -30,155 +31,55 @@ import {
 } from "@/components/ui/sidebar";
 import { UserAvatar } from "@/components/user-avatar";
 import { useWorkspace } from "@/lib/workspace-store";
-import { MANAGER_ROLES, ROLE_LABELS, type Role } from "@/lib/mock-data";
+import { ROLE_LABELS, primaryRole, type Role } from "@/lib/mock-data";
 
 interface NavItem {
   title: string;
   url: string;
   icon: typeof LayoutDashboard;
   roles: Role[];
-  group: "Workspace" | "Management";
-  /** Hidden if admin somehow has no university at all resolved (there always is one in practice). */
-  requiresUniversity?: boolean;
+  group: "Workspace" | "Marketplace" | "Management";
 }
 
 const NAV: NavItem[] = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-    roles: ["admin", ...MANAGER_ROLES, "staff", "student", "finance"],
-    group: "Workspace",
-    requiresUniversity: true,
-  },
-  {
-    title: "My tasks",
-    url: "/my-tasks",
-    icon: CheckSquare,
-    roles: ["admin", ...MANAGER_ROLES, "staff", "student"],
-    group: "Workspace",
-    requiresUniversity: true,
-  },
-  {
-    title: "Schedule",
-    url: "/schedule",
-    icon: CalendarDays,
-    roles: ["admin", ...MANAGER_ROLES, "staff", "student"],
-    group: "Workspace",
-    requiresUniversity: true,
-  },
-  {
-    title: "All tasks",
-    url: "/tasks",
-    icon: ClipboardList,
-    roles: ["admin", ...MANAGER_ROLES],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Users management",
-    url: "/team",
-    icon: Users,
-    roles: ["admin", ...MANAGER_ROLES],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Workload",
-    url: "/workload",
-    icon: Activity,
-    roles: ["admin", ...MANAGER_ROLES],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Logs",
-    url: "/logs",
-    icon: History,
-    roles: ["admin", ...MANAGER_ROLES],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Units management",
-    url: "/organization",
-    icon: Building2,
-    roles: ["admin", "principal"],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Objectives & Activities",
-    url: "/objectives",
-    icon: Target,
-    roles: ["admin", "principal"],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
-    roles: ["admin", "principal"],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Budget Approvals",
-    url: "/budgets",
-    icon: Wallet,
-    roles: ["admin", ...MANAGER_ROLES, "finance"],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Material Requests",
-    url: "/material-requests",
-    icon: Package,
-    roles: ["admin", ...MANAGER_ROLES, "staff"],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Procurement",
-    url: "/procurement",
-    icon: ShoppingCart,
-    roles: ["admin", ...MANAGER_ROLES],
-    group: "Management",
-    requiresUniversity: true,
-  },
-  {
-    title: "Requisitions",
-    url: "/requisitions",
-    icon: HandCoins,
-    roles: ["admin", ...MANAGER_ROLES, "finance"],
-    group: "Management",
-    requiresUniversity: true,
-  },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
+  { title: "Messages", url: "/messages", icon: MessageSquare, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
+  { title: "Settings", url: "/settings", icon: Settings, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
+
+  { title: "My listings", url: "/my-listings", icon: Warehouse, roles: ["farmer"], group: "Marketplace" },
+  { title: "Produce listings", url: "/listings", icon: Sprout, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
+  { title: "Buyer requests", url: "/requests", icon: ShoppingBasket, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
+  { title: "Aggregation groups", url: "/aggregation", icon: Handshake, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
+  { title: "Input marketplace", url: "/inputs", icon: Package, roles: ["farmer", "supplier", "admin"], group: "Marketplace" },
+  { title: "Group purchases", url: "/group-purchases", icon: Boxes, roles: ["farmer", "supplier", "admin"], group: "Marketplace" },
+  { title: "Transactions", url: "/transactions", icon: ShoppingCart, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
+  { title: "Market prices", url: "/market-prices", icon: LineChart, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
+  { title: "Transport pooling", url: "/transport-pool", icon: Truck, roles: ["transporter", "admin"], group: "Marketplace" },
+
+  { title: "Users", url: "/users", icon: Users, roles: ["admin"], group: "Management" },
+  { title: "Cooperatives", url: "/cooperatives", icon: Building2, roles: ["admin"], group: "Management" },
+  { title: "Audit log", url: "/logs", icon: ScrollText, roles: ["admin"], group: "Management" },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { currentUser, effectiveUniversityId } = useWorkspace();
+  const { currentUser } = useWorkspace();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
 
-  const groups: Array<NavItem["group"]> = ["Workspace", "Management"];
-  const isAdminWithoutUniversity = currentUser.role === "admin" && !effectiveUniversityId;
+  const groups: Array<NavItem["group"]> = ["Workspace", "Marketplace", "Management"];
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-2.5 px-1 py-1.5">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
-            TP
+            AB
           </span>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">TaskPlanner</p>
-              <p className="truncate text-xs text-sidebar-foreground/70">
-                Task and budgeting management
-              </p>
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">Agribridge</p>
+              <p className="truncate text-xs text-sidebar-foreground/70">Farmers · Buyers · Suppliers</p>
             </div>
           )}
         </Link>
@@ -187,10 +88,7 @@ export function AppSidebar() {
       <SidebarContent>
         {groups.map((group) => {
           const items = NAV.filter(
-            (i) =>
-              i.group === group &&
-              i.roles.includes(currentUser.role) &&
-              !(i.requiresUniversity && isAdminWithoutUniversity),
+            (i) => i.group === group && currentUser.roles.some((r) => i.roles.includes(r)),
           );
           if (items.length === 0) return null;
           return (
@@ -221,14 +119,14 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="flex items-center gap-2.5 px-1 py-1.5">
-          <UserAvatar member={currentUser} />
+          <UserAvatar user={currentUser} />
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-sidebar-foreground">
                 {currentUser.name}
               </p>
               <p className="truncate text-xs text-sidebar-foreground/70">
-                {ROLE_LABELS[currentUser.role]}
+                {ROLE_LABELS[primaryRole(currentUser)]}
               </p>
             </div>
           )}

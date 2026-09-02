@@ -79,15 +79,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "TaskFlow — Team task planning & workload tracking" },
+      { title: "Agribridge — Digital agricultural marketplace" },
       {
         name: "description",
         content:
-          "Plan, assign and track team tasks so nobody stays idle. Role-based dashboards, filters and exports.",
+          "Connecting farmers, buyers and input suppliers in Rwanda through listings, bulk aggregation and group input purchasing.",
       },
-      { name: "author", content: "TaskFlow" },
-      { property: "og:title", content: "TaskFlow — Team task planning" },
-      { property: "og:description", content: "Assign work, track progress and keep your team busy." },
+      { name: "author", content: "Agribridge" },
+      { property: "og:title", content: "Agribridge — Digital agricultural marketplace" },
+      {
+        property: "og:description",
+        content: "Farmers, buyers and suppliers trading produce and inputs, aggregated in bulk.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
