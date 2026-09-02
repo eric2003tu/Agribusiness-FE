@@ -72,7 +72,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-2.5 px-1 py-1.5">
+        <Link to="/dashboard" className="flex items-center gap-2.5 px-1 py-1.5">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
             AB
           </span>

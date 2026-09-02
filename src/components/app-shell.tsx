@@ -37,7 +37,7 @@ export function AppShell({
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (ready && !session) void navigate({ to: "/", replace: true });
+    if (ready && !session) void navigate({ to: "/login", replace: true });
   }, [ready, session, navigate]);
 
   const allowed = !allowedRoles || currentUser.roles.some((r) => allowedRoles.includes(r));
@@ -104,7 +104,7 @@ export function AppShell({
                 <DropdownMenuItem
                   onSelect={() => {
                     signOut();
-                    void navigate({ to: "/", replace: true });
+                    void navigate({ to: "/login", replace: true });
                   }}
                 >
                   <LogOut className="size-4" />
