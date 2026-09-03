@@ -188,7 +188,7 @@ function ListingCard({ listing }: { listing: ProduceListing }) {
 function ListingsPage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { product: productParam, district: districtParam } = Route.useSearch();
-  const { produceListings, can } = useWorkspace();
+  const { produceListings } = useWorkspace();
 
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState(productParam ?? "all");
@@ -244,15 +244,6 @@ function ListingsPage() {
     <AppShell
       title="Produce listings"
       description="Every farmer offer currently on the marketplace — add what you need to your cart."
-      actions={
-        can("manageOwnListings") && (
-          <Button asChild>
-            <Link to="/listings/new">
-              <Plus className="size-4" /> New listing
-            </Link>
-          </Button>
-        )
-      }
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard

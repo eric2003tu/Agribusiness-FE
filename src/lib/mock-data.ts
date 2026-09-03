@@ -353,6 +353,22 @@ export interface NotificationLog {
   detail: string;
 }
 
+export type AuditStatus = "success" | "failed";
+
+/** A true system audit trail — who did what, to what, and whether it went
+ * through — as distinct from NotificationLog, which is the SMS-style
+ * messages sent *to* users rather than a record of actions taken *by* them. */
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  actorId: string | null;
+  actorLabel?: string;
+  action: string;
+  targetLabel: string;
+  status: AuditStatus;
+  reason?: string;
+}
+
 export interface TransportOffer {
   id: string;
   groupId: string;
@@ -940,6 +956,19 @@ export const transactions: Transaction[] = [
   { id: "TX-6020", buyerId: "u11", sellerId: "u3", groupId: null, productId: "prod-tomato", quantity: 80, unit: "kg", unitPrice: 450, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, paymentMethod: "card", createdAt: day(-2), completedAt: day(-1) },
   { id: "TX-6021", buyerId: "u1", sellerId: "u14", groupId: null, productId: "prod-dap", quantity: 50, unit: "kg", unitPrice: 1050, status: "pending", confirmedBySeller: false, confirmedByBuyer: false, paymentMethod: "mobile_money", createdAt: day(0), completedAt: null },
   { id: "TX-6022", buyerId: "u13", sellerId: "u16", groupId: null, productId: "prod-mancozeb", quantity: 10, unit: "litre", unitPrice: 6500, status: "refunded", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Sealed containers were already opened on arrival.", paymentMethod: "card", createdAt: day(-12), completedAt: day(-10) },
+  { id: "TX-6023", buyerId: "u12", sellerId: "u1", groupId: null, productId: "prod-banana", quantity: 200, unit: "kg", unitPrice: 275, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Bananas were overripe on arrival.", paymentMethod: "mobile_money", createdAt: day(-8), completedAt: day(-6) },
+  { id: "TX-6024", buyerId: "u1", sellerId: "u14", groupId: null, productId: "prod-urea", quantity: 80, unit: "kg", unitPrice: 900, status: "refunded", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Bag was torn and partially spilled in transit.", paymentMethod: "card", createdAt: day(-15), completedAt: day(-13) },
+  { id: "TX-6025", buyerId: "u11", sellerId: "u7", groupId: null, productId: "prod-rice", quantity: 400, unit: "kg", unitPrice: 515, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Rice quality did not match the sample.", paymentMethod: "mobile_money", createdAt: day(-5), completedAt: day(-3) },
+  { id: "TX-6026", buyerId: "u7", sellerId: "u14", groupId: null, productId: "prod-mancozeb", quantity: 15, unit: "litre", unitPrice: 6500, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Pesticide had expired before delivery.", paymentMethod: "mobile_money", createdAt: day(-4), completedAt: day(-2) },
+  { id: "TX-6027", buyerId: "u2", sellerId: "u1", groupId: null, productId: "prod-maize", quantity: 120, unit: "kg", unitPrice: 320, status: "refunded", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Short delivery — received less than ordered.", paymentMethod: "card", createdAt: day(-19), completedAt: day(-17) },
+  { id: "TX-6028", buyerId: "u11", sellerId: "u1", groupId: null, productId: "prod-onion", quantity: 90, unit: "kg", unitPrice: 400, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Onions were moldy in the middle of the sack.", paymentMethod: "mobile_money", createdAt: day(-2), completedAt: day(-1) },
+  { id: "TX-6029", buyerId: "u13", sellerId: "u15", groupId: null, productId: "prod-maize-seed", quantity: 40, unit: "kg", unitPrice: 2200, status: "refunded", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Delivered seed weight was short of the order.", paymentMethod: "card", createdAt: day(-24), completedAt: day(-22) },
+  { id: "TX-6030", buyerId: "u7", sellerId: "u9", groupId: null, productId: "prod-cassava", quantity: 60, unit: "kg", unitPrice: 180, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Cassava was already rotting on arrival.", paymentMethod: "mobile_money", createdAt: day(-3), completedAt: day(-1) },
+  { id: "TX-6031", buyerId: "u3", sellerId: "u16", groupId: null, productId: "prod-bean-seed", quantity: 30, unit: "kg", unitPrice: 1400, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Seed packaging was damaged and contaminated.", paymentMethod: "card", createdAt: day(-6), completedAt: day(-4) },
+  { id: "TX-6032", buyerId: "u11", sellerId: "u8", groupId: null, productId: "prod-beans", quantity: 150, unit: "kg", unitPrice: 600, status: "refunded", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Beans had visible weevil damage.", paymentMethod: "mobile_money", createdAt: day(-17), completedAt: day(-15) },
+  { id: "TX-6033", buyerId: "u1", sellerId: "u15", groupId: null, productId: "prod-dap", quantity: 60, unit: "kg", unitPrice: 1050, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Wrong fertilizer grade delivered.", paymentMethod: "mobile_money", createdAt: day(-2), completedAt: day(-1) },
+  { id: "TX-6034", buyerId: "u5", sellerId: "u7", groupId: null, productId: "prod-tomato", quantity: 50, unit: "kg", unitPrice: 450, status: "refunded", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Tomatoes were crushed in transit.", paymentMethod: "card", createdAt: day(-11), completedAt: day(-9) },
+  { id: "TX-6035", buyerId: "u6", sellerId: "u14", groupId: null, productId: "prod-dap", quantity: 100, unit: "kg", unitPrice: 1050, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Fertilizer arrived in a leaking bag.", paymentMethod: "mobile_money", createdAt: day(-1), completedAt: day(0) },
 ];
 
 export const ratings: Rating[] = [
@@ -1045,4 +1074,24 @@ export const transportOffers: TransportOffer[] = [
     note: "Pickup available Thursday morning, 3-ton truck.",
     createdAt: hoursAgo(18),
   },
+];
+
+/* --------------------------------- Audit log -------------------------------- */
+
+export const auditLog: AuditLogEntry[] = [
+  { id: "AL-1", timestamp: hoursAgo(1), actorId: "u1", action: "Created listing", targetLabel: "Maize · 1,200kg · PL-1001", status: "success" },
+  { id: "AL-2", timestamp: hoursAgo(2), actorId: "u11", action: "Placed order", targetLabel: "Maize · 300kg from Emmanuel Nkurunziza", status: "success" },
+  { id: "AL-3", timestamp: hoursAgo(3), actorId: "u7", action: "Attempted purchase", targetLabel: "Cassava listing PL-1013", status: "failed", reason: "Requested quantity exceeded available stock." },
+  { id: "AL-4", timestamp: hoursAgo(4), actorId: "u18", action: "Verified supplier", targetLabel: "Agro Input Distributors Rwanda", status: "success" },
+  { id: "AL-5", timestamp: hoursAgo(5), actorId: null, actorLabel: "+250788000099", action: "Sign-in attempt", targetLabel: "+250788000099", status: "failed", reason: "No account found for that phone number." },
+  { id: "AL-6", timestamp: hoursAgo(6), actorId: "u2", action: "Sign-in attempt", targetLabel: "Alice Mukamana's account", status: "failed", reason: "Incorrect OTP code." },
+  { id: "AL-7", timestamp: hoursAgo(7), actorId: "u12", action: "Requested refund", targetLabel: "TX-6019 · Irish Potatoes", status: "success" },
+  { id: "AL-8", timestamp: hoursAgo(8), actorId: "u18", action: "Approved refund", targetLabel: "TX-6018 · Urea Fertilizer", status: "success" },
+  { id: "AL-9", timestamp: hoursAgo(9), actorId: "u18", action: "Denied refund", targetLabel: "TX-6011 · Mancozeb Pesticide", status: "success" },
+  { id: "AL-10", timestamp: hoursAgo(10), actorId: null, actorLabel: "+250788999999", action: "Registration attempt", targetLabel: "+250788999999", status: "failed", reason: "An account with this phone number already exists." },
+  { id: "AL-11", timestamp: hoursAgo(12), actorId: "u14", action: "Listed input", targetLabel: "Urea Fertilizer · 20,000kg", status: "success" },
+  { id: "AL-12", timestamp: hoursAgo(14), actorId: "u17", action: "Offered transport", targetLabel: "Aggregation group AG-3003", status: "success" },
+  { id: "AL-13", timestamp: hoursAgo(16), actorId: "u7", action: "Raised dispute", targetLabel: "TX-6005 · Cassava", status: "success" },
+  { id: "AL-14", timestamp: hoursAgo(20), actorId: "u18", action: "Suspended account", targetLabel: "Eric Tuyishime — repeated spam listings", status: "success" },
+  { id: "AL-15", timestamp: hoursAgo(26), actorId: "u5", action: "Registered account", targetLabel: "New farmer account", status: "success" },
 ];

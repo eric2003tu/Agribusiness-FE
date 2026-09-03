@@ -10,6 +10,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { authenticate, SESSION_STORAGE_KEY } from "./auth";
+import { formatQuantity } from "./format";
 import {
   users as seedUsers,
   produceListings as seedProduceListings,
@@ -28,11 +29,14 @@ import {
   cooperatives as seedCooperatives,
   endorsements as seedEndorsements,
   transportOffers as seedTransportOffers,
+  auditLog as seedAuditLog,
   districtOf,
   productById,
   type AggregationGroup,
   type AggregationParticipant,
   type AggregationStatus,
+  type AuditLogEntry,
+  type AuditStatus,
   type BuyerRequest,
   type Cooperative,
   type Endorsement,
@@ -205,6 +209,8 @@ interface WorkspaceContextValue {
   notifications: NotificationLog[];
   notificationsForUser: (userId: string) => NotificationLog[];
 
+  auditLog: AuditLogEntry[];
+
   verifyUser: (id: string, verified: boolean) => void;
   setUserSuspended: (id: string, suspended: boolean) => void;
   expireListing: (id: string) => void;
@@ -239,6 +245,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [allMessages, setAllMessages] = useState<Message[]>(seedMessages);
   const [allPriceRecords, setAllPriceRecords] = useState<MarketPriceRecord[]>(seedMarketPriceRecords);
   const [allNotifications, setAllNotifications] = useState<NotificationLog[]>(seedNotificationLog);
+  const [allAuditLog, setAllAuditLog] = useState<AuditLogEntry[]>(seedAuditLog);
   const [allEndorsements, setAllEndorsements] = useState<Endorsement[]>(seedEndorsements);
   const [allTransportOffers, setAllTransportOffers] = useState<TransportOffer[]>(seedTransportOffers);
   const [cartItems, setCartItems] = useState<CartLine[]>([]);
@@ -268,21 +275,58 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const logAudit = useCallback(
+    (
+      actorId: string | null,
+      action: string,
+      targetLabel: string,
+      status: AuditStatus,
+      reason?: string,
+      actorLabel?: string,
+    ) => {
+      setAllAuditLog((prev) => [
+        {
+          id: `AL-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          timestamp: new Date().toISOString(),
+          actorId,
+          ...(actorLabel ? { actorLabel } : {}),
+          action,
+          targetLabel,
+          status,
+          ...(reason ? { reason } : {}),
+        },
+        ...prev,
+      ]);
+    },
+    [],
+  );
+
   const signIn = useCallback<WorkspaceContextValue["signIn"]>(
     (phone, otp) => {
       const result = authenticate(phone, otp, allUsers);
       if (!result.ok) {
+        const normalized = phone.trim().replace(/\s+/g, "");
+        const maybeUser = allUsers.find((u) => u.phone === normalized);
+        logAudit(
+          maybeUser?.id ?? null,
+          "Sign-in attempt",
+          maybeUser ? `${maybeUser.name}'s account` : normalized,
+          "failed",
+          result.error,
+          maybeUser ? undefined : normalized,
+        );
         toast.error("Sign in failed", { description: result.error });
         return { ok: false, error: result.error };
       }
       setCurrentUserIdState(result.user.id);
       persist(result.user.id);
+      logAudit(result.user.id, "Signed in", result.user.name, "success");
       toast.success(`Welcome back, ${result.user.name.split(" ")[0]}`, {
         description: `Signed in as ${result.user.roles[0]}.`,
       });
       return { ok: true };
     },
-    [persist, allUsers],
+    [persist, allUsers, logAudit],
   );
 
   const signOut = useCallback(() => {
@@ -332,6 +376,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     ({ name, phone, roles, preferredLanguage, locationId }) => {
       const normalized = phone.trim().replace(/\s+/g, "");
       if (allUsers.some((u) => u.phone === normalized)) {
+        logAudit(null, "Registration attempt", normalized, "failed", "Phone already registered", normalized);
         toast.error("That phone number is already registered", {
           description: "Try signing in instead.",
         });
@@ -354,12 +399,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setAllUsers((prev) => [...prev, user]);
       setCurrentUserIdState(id);
       persist(id);
+      logAudit(id, "Registered account", user.name, "success");
       toast.success(`Welcome to Agribridge, ${user.name.split(" ")[0]}`, {
         description: "Your account has been created.",
       });
       return { ok: true };
     },
-    [allUsers, persist],
+    [allUsers, persist, logAudit],
   );
 
   const updateProfile: WorkspaceContextValue["updateProfile"] = useCallback(
@@ -401,9 +447,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           `A new ${productName} listing (${listing.quantity}${listing.unit}) matches your open request.`,
         ),
       );
+      logAudit(currentUser.id, "Created listing", `${productName} · ${listing.quantity}${listing.unit} · ${listing.id}`, "success");
       toast.success("Listing published");
     },
-    [currentUser.id, allBuyerRequests, notify],
+    [currentUser.id, allBuyerRequests, notify, logAudit],
   );
 
   const updateListing: WorkspaceContextValue["updateListing"] = useCallback((id, fields) => {
@@ -411,10 +458,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     toast.success("Listing updated");
   }, []);
 
-  const deleteListing: WorkspaceContextValue["deleteListing"] = useCallback((id) => {
-    setAllProduceListings((prev) => prev.filter((l) => l.id !== id));
-    toast.success("Listing removed");
-  }, []);
+  const deleteListing: WorkspaceContextValue["deleteListing"] = useCallback(
+    (id) => {
+      const listing = allProduceListings.find((l) => l.id === id);
+      setAllProduceListings((prev) => prev.filter((l) => l.id !== id));
+      logAudit(
+        currentUser.id,
+        "Deleted listing",
+        listing ? `${productById(listing.productId)?.name ?? "Listing"} · ${id}` : id,
+        "success",
+      );
+      toast.success("Listing removed");
+    },
+    [allProduceListings, currentUser.id, logAudit],
+  );
 
   const renewListing: WorkspaceContextValue["renewListing"] = useCallback((id, expiresAt) => {
     setAllProduceListings((prev) =>
@@ -628,13 +685,31 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const succeededKeys = new Set<string>();
       let skipped = 0;
 
+      const auditEntries: Array<() => void> = [];
+
       cartItems.forEach((line, index) => {
         const key = `${line.kind}__${line.listingId}`;
         if (line.kind === "produce") {
           const listing = allProduceListings.find((l) => l.id === line.listingId);
           const price = listing?.negotiable ? line.offerPrice : listing?.unitPrice;
+          const productName = productById(listing?.productId)?.name ?? "produce";
           if (!listing || listing.status !== "available" || line.quantity > listing.quantity || !price || price <= 0) {
             skipped += 1;
+            auditEntries.push(() =>
+              logAudit(
+                currentUser.id,
+                "Attempted purchase",
+                `${productName} · ${line.listingId}`,
+                "failed",
+                !listing
+                  ? "Listing no longer exists."
+                  : listing.status !== "available"
+                    ? "Listing is no longer available."
+                    : line.quantity > listing.quantity
+                      ? "Requested quantity exceeded available stock."
+                      : "Missing a valid offer price.",
+              ),
+            );
             return;
           }
           createdTransactions.push({
@@ -655,10 +730,28 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           });
           produceUpdates.set(line.listingId, (produceUpdates.get(line.listingId) ?? 0) + line.quantity);
           succeededKeys.add(key);
+          auditEntries.push(() =>
+            logAudit(
+              currentUser.id,
+              "Placed order",
+              `${productName} · ${formatQuantity(line.quantity, listing.unit)} from ${userById(listing.sellerId)?.name ?? "seller"}`,
+              "success",
+            ),
+          );
         } else {
           const listing = allInputListings.find((l) => l.id === line.listingId);
+          const productName = productById(listing?.productId)?.name ?? "input";
           if (!listing || line.quantity > listing.stockQty) {
             skipped += 1;
+            auditEntries.push(() =>
+              logAudit(
+                currentUser.id,
+                "Attempted purchase",
+                `${productName} · ${line.listingId}`,
+                "failed",
+                !listing ? "Listing no longer exists." : "Requested quantity exceeded available stock.",
+              ),
+            );
             return;
           }
           createdTransactions.push({
@@ -679,10 +772,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           });
           inputUpdates.set(line.listingId, (inputUpdates.get(line.listingId) ?? 0) + line.quantity);
           succeededKeys.add(key);
+          auditEntries.push(() =>
+            logAudit(
+              currentUser.id,
+              "Placed order",
+              `${productName} · ${formatQuantity(line.quantity, listing.unit)} from ${userById(listing.supplierId)?.name ?? "supplier"}`,
+              "success",
+            ),
+          );
         }
       });
 
       if (createdTransactions.length === 0) {
+        auditEntries.forEach((log) => log());
         toast.error("Nothing could be ordered", { description: "Those items are no longer available." });
         return false;
       }
@@ -703,6 +805,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       );
       setAllTransactions((prev) => [...createdTransactions, ...prev]);
       setCartItems((prev) => prev.filter((l) => !succeededKeys.has(`${l.kind}__${l.listingId}`)));
+      auditEntries.forEach((log) => log());
 
       const sellerIds = new Set(createdTransactions.map((t) => t.sellerId));
       sellerIds.forEach((sellerId) =>
@@ -718,7 +821,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       return true;
     },
-    [cartItems, allProduceListings, allInputListings, currentUser, notify],
+    [cartItems, allProduceListings, allInputListings, currentUser, notify, logAudit, userById],
   );
 
   /* -------------------------------- Requests -------------------------------- */
@@ -1138,9 +1241,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString().slice(0, 10),
       };
       setAllInputListings((prev) => [listing, ...prev]);
+      logAudit(
+        currentUser.id,
+        "Listed input",
+        `${productById(listing.productId)?.name ?? "Input"} · ${formatQuantity(listing.stockQty, listing.unit)}`,
+        "success",
+      );
       toast.success("Input listed");
     },
-    [currentUser.id],
+    [currentUser.id, logAudit],
   );
 
   const updateInputListing: WorkspaceContextValue["updateInputListing"] = useCallback(
@@ -1151,10 +1260,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const deleteInputListing: WorkspaceContextValue["deleteInputListing"] = useCallback((id) => {
-    setAllInputListings((prev) => prev.filter((l) => l.id !== id));
-    toast.success("Listing removed");
-  }, []);
+  const deleteInputListing: WorkspaceContextValue["deleteInputListing"] = useCallback(
+    (id) => {
+      const listing = allInputListings.find((l) => l.id === id);
+      setAllInputListings((prev) => prev.filter((l) => l.id !== id));
+      logAudit(
+        currentUser.id,
+        "Deleted input listing",
+        listing ? `${productById(listing.productId)?.name ?? "Input"} · ${id}` : id,
+        "success",
+      );
+      toast.success("Listing removed");
+    },
+    [allInputListings, currentUser.id, logAudit],
+  );
 
   const orderInput: WorkspaceContextValue["orderInput"] = useCallback(
     (inputListingId, quantity) => {
@@ -1417,11 +1536,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         bothWillBeConfirmed ? "Transaction completed" : "Transaction confirmed",
         `${currentUser.name} confirmed ${productById(tx.productId)?.name ?? "the order"}${bothWillBeConfirmed ? " — it's now complete." : "."}`,
       );
+      logAudit(
+        currentUser.id,
+        `Confirmed as ${as}`,
+        `${productById(tx.productId)?.name ?? "Transaction"} · ${tx.id}`,
+        "success",
+      );
       toast.success("Confirmed", {
         description: "Once both sides confirm, the transaction is marked complete.",
       });
     },
-    [allTransactions, currentUser, notify],
+    [allTransactions, currentUser, notify, logAudit],
   );
 
   const raiseDispute: WorkspaceContextValue["raiseDispute"] = useCallback(
@@ -1439,9 +1564,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             notify(admin.id, "transaction", "Buyer or seller raised a dispute", reason),
           );
       }
+      logAudit(
+        currentUser.id,
+        "Raised dispute",
+        `${productById(tx?.productId)?.name ?? "Transaction"} · ${id}`,
+        "success",
+      );
       toast.success("Dispute raised", { description: "An admin will review this transaction." });
     },
-    [allTransactions, allUsers, currentUser, notify],
+    [allTransactions, allUsers, currentUser, notify, logAudit],
   );
 
   const resolveDispute: WorkspaceContextValue["resolveDispute"] = useCallback(
@@ -1458,9 +1589,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         notify(tx.buyerId, "transaction", "Dispute resolved", "An admin marked this transaction complete.");
         notify(tx.sellerId, "transaction", "Dispute resolved", "An admin marked this transaction complete.");
       }
+      logAudit(
+        currentUser.id,
+        "Resolved dispute",
+        `${productById(tx?.productId)?.name ?? "Transaction"} · ${id}`,
+        "success",
+      );
       toast.success("Dispute resolved");
     },
-    [allTransactions, notify],
+    [allTransactions, notify, currentUser.id, logAudit],
   );
 
   const requestRefund: WorkspaceContextValue["requestRefund"] = useCallback(
@@ -1475,9 +1612,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       allUsers
         .filter((u) => u.roles.includes("admin"))
         .forEach((admin) => notify(admin.id, "transaction", "Refund requested", reason));
+      logAudit(currentUser.id, "Requested refund", `${productById(tx.productId)?.name ?? "Transaction"} · ${id}`, "success");
       toast.success("Refund requested", { description: "An admin will review this transaction." });
     },
-    [allTransactions, allUsers, currentUser, notify],
+    [allTransactions, allUsers, currentUser, notify, logAudit],
   );
 
   const resolveRefund: WorkspaceContextValue["resolveRefund"] = useCallback(
@@ -1499,9 +1637,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         approve ? "Refund approved" : "Refund denied",
         approve ? "A refund was issued to the buyer." : "The refund request was denied.",
       );
+      logAudit(
+        currentUser.id,
+        approve ? "Approved refund" : "Denied refund",
+        `${productById(tx.productId)?.name ?? "Transaction"} · ${id}`,
+        "success",
+      );
       toast.success(approve ? "Refund approved" : "Refund denied");
     },
-    [allTransactions, notify],
+    [allTransactions, notify, currentUser.id, logAudit],
   );
 
   const rateTransaction: WorkspaceContextValue["rateTransaction"] = useCallback(
@@ -1746,25 +1890,42 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   /* ---------------------------------- Admin ---------------------------------- */
 
-  const verifyUser: WorkspaceContextValue["verifyUser"] = useCallback((id, verified) => {
-    setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isVerified: verified } : u)));
-    toast.success(verified ? "User verified" : "Verification removed");
-  }, []);
+  const verifyUser: WorkspaceContextValue["verifyUser"] = useCallback(
+    (id, verified) => {
+      const target = allUsers.find((u) => u.id === id);
+      setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isVerified: verified } : u)));
+      logAudit(currentUser.id, verified ? "Verified user" : "Unverified user", target?.name ?? id, "success");
+      toast.success(verified ? "User verified" : "Verification removed");
+    },
+    [allUsers, currentUser.id, logAudit],
+  );
 
   const setUserSuspended: WorkspaceContextValue["setUserSuspended"] = useCallback(
     (id, suspended) => {
+      const target = allUsers.find((u) => u.id === id);
       setAllUsers((prev) =>
         prev.map((u) => (u.id === id ? { ...u, status: suspended ? "suspended" : "active" } : u)),
       );
+      logAudit(currentUser.id, suspended ? "Suspended account" : "Reinstated account", target?.name ?? id, "success");
       toast.success(suspended ? "User suspended" : "User reinstated");
     },
-    [],
+    [allUsers, currentUser.id, logAudit],
   );
 
-  const expireListing: WorkspaceContextValue["expireListing"] = useCallback((id) => {
-    setAllProduceListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: "expired" } : l)));
-    toast.success("Listing expired");
-  }, []);
+  const expireListing: WorkspaceContextValue["expireListing"] = useCallback(
+    (id) => {
+      const listing = allProduceListings.find((l) => l.id === id);
+      setAllProduceListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: "expired" } : l)));
+      logAudit(
+        currentUser.id,
+        "Expired listing",
+        listing ? `${productById(listing.productId)?.name ?? "Listing"} · ${id}` : id,
+        "success",
+      );
+      toast.success("Listing expired");
+    },
+    [allProduceListings, currentUser.id, logAudit],
+  );
 
   const value: WorkspaceContextValue = {
     users: allUsers,
@@ -1859,6 +2020,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
     notifications: allNotifications,
     notificationsForUser,
+
+    auditLog: allAuditLog,
 
     verifyUser,
     setUserSuspended,
