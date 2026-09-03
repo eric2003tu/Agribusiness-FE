@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AggregationRouteImport } from './routes/aggregation'
+import { Route as CartRouteImport } from './routes/cart'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CooperativesRouteImport } from './routes/cooperatives'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GroupPurchasesRouteImport } from './routes/group-purchases'
@@ -21,6 +23,8 @@ import { Route as LogsRouteImport } from './routes/logs'
 import { Route as MarketPricesRouteImport } from './routes/market-prices'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MyListingsRouteImport } from './routes/my-listings'
+import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RequestsRouteImport } from './routes/requests'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -46,6 +50,16 @@ const IndexRoute = IndexRouteImport.update({
 const AggregationRoute = AggregationRouteImport.update({
   id: '/aggregation',
   path: '/aggregation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CartRoute = CartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CooperativesRoute = CooperativesRouteImport.update({
@@ -96,6 +110,16 @@ const MessagesRoute = MessagesRouteImport.update({
 const MyListingsRoute = MyListingsRouteImport.update({
   id: '/my-listings',
   path: '/my-listings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersRoute = OrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundsRoute = RefundsRouteImport.update({
+  id: '/refunds',
+  path: '/refunds',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -184,6 +208,8 @@ const UsersUserIdRoute = UsersUserIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
+  '/cart': typeof CartRoute
+  '/checkout': typeof CheckoutRoute
   '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
@@ -194,6 +220,8 @@ export interface FileRoutesByFullPath {
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
+  '/orders': typeof OrdersRoute
+  '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -214,6 +242,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
+  '/cart': typeof CartRoute
+  '/checkout': typeof CheckoutRoute
   '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
@@ -224,6 +254,8 @@ export interface FileRoutesByTo {
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
+  '/orders': typeof OrdersRoute
+  '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -245,6 +277,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
+  '/cart': typeof CartRoute
+  '/checkout': typeof CheckoutRoute
   '/cooperatives': typeof CooperativesRoute
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
@@ -255,6 +289,8 @@ export interface FileRoutesById {
   '/market-prices': typeof MarketPricesRoute
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
+  '/orders': typeof OrdersRoute
+  '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -277,6 +313,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aggregation'
+    | '/cart'
+    | '/checkout'
     | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
@@ -287,6 +325,8 @@ export interface FileRouteTypes {
     | '/market-prices'
     | '/messages'
     | '/my-listings'
+    | '/orders'
+    | '/refunds'
     | '/register'
     | '/requests'
     | '/settings'
@@ -307,6 +347,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/aggregation'
+    | '/cart'
+    | '/checkout'
     | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
@@ -317,6 +359,8 @@ export interface FileRouteTypes {
     | '/market-prices'
     | '/messages'
     | '/my-listings'
+    | '/orders'
+    | '/refunds'
     | '/register'
     | '/requests'
     | '/settings'
@@ -337,6 +381,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/aggregation'
+    | '/cart'
+    | '/checkout'
     | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
@@ -347,6 +393,8 @@ export interface FileRouteTypes {
     | '/market-prices'
     | '/messages'
     | '/my-listings'
+    | '/orders'
+    | '/refunds'
     | '/register'
     | '/requests'
     | '/settings'
@@ -368,6 +416,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AggregationRoute: typeof AggregationRouteWithChildren
+  CartRoute: typeof CartRoute
+  CheckoutRoute: typeof CheckoutRoute
   CooperativesRoute: typeof CooperativesRoute
   DashboardRoute: typeof DashboardRoute
   GroupPurchasesRoute: typeof GroupPurchasesRouteWithChildren
@@ -378,6 +428,8 @@ export interface RootRouteChildren {
   MarketPricesRoute: typeof MarketPricesRoute
   MessagesRoute: typeof MessagesRoute
   MyListingsRoute: typeof MyListingsRoute
+  OrdersRoute: typeof OrdersRoute
+  RefundsRoute: typeof RefundsRoute
   RegisterRoute: typeof RegisterRoute
   RequestsRoute: typeof RequestsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
@@ -400,6 +452,20 @@ declare module '@tanstack/react-router' {
       path: '/aggregation'
       fullPath: '/aggregation'
       preLoaderRoute: typeof AggregationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cart': {
+      id: '/cart'
+      path: '/cart'
+      fullPath: '/cart'
+      preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cooperatives': {
@@ -470,6 +536,20 @@ declare module '@tanstack/react-router' {
       path: '/my-listings'
       fullPath: '/my-listings'
       preLoaderRoute: typeof MyListingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders': {
+      id: '/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refunds': {
+      id: '/refunds'
+      path: '/refunds'
+      fullPath: '/refunds'
+      preLoaderRoute: typeof RefundsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -677,6 +757,8 @@ const UsersRouteWithChildren = UsersRoute._addFileChildren(UsersRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AggregationRoute: AggregationRouteWithChildren,
+  CartRoute: CartRoute,
+  CheckoutRoute: CheckoutRoute,
   CooperativesRoute: CooperativesRoute,
   DashboardRoute: DashboardRoute,
   GroupPurchasesRoute: GroupPurchasesRouteWithChildren,
@@ -687,6 +769,8 @@ const rootRouteChildren: RootRouteChildren = {
   MarketPricesRoute: MarketPricesRoute,
   MessagesRoute: MessagesRoute,
   MyListingsRoute: MyListingsRoute,
+  OrdersRoute: OrdersRoute,
+  RefundsRoute: RefundsRoute,
   RegisterRoute: RegisterRoute,
   RequestsRoute: RequestsRouteWithChildren,
   SettingsRoute: SettingsRoute,

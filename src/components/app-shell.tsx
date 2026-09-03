@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { ChevronDown, LogOut } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ChevronDown, LogOut, ShoppingCart } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { UserAvatar } from "@/components/user-avatar";
@@ -33,7 +33,7 @@ export function AppShell({
   allowedRoles?: Role[];
   children: ReactNode;
 }) {
-  const { users, currentUser, session, ready, setCurrentUserId, signOut } = useWorkspace();
+  const { users, currentUser, session, ready, setCurrentUserId, signOut, cartCount } = useWorkspace();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,6 +66,16 @@ export function AppShell({
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-foreground">{title}</p>
             </div>
+            <Button asChild variant="ghost" size="icon" className="relative" aria-label="Cart">
+              <Link to="/cart">
+                <ShoppingCart className="size-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
+              </Link>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-10 gap-2 px-2" aria-label="Account menu">

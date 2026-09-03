@@ -52,6 +52,8 @@ const TRANSACTION_STYLES: Record<TransactionStatus, string> = {
   confirmed_by_buyer: "bg-info/12 text-info",
   completed: "bg-success/12 text-success",
   disputed: "bg-destructive/12 text-destructive",
+  refund_requested: "bg-warning/20 text-warning-foreground",
+  refunded: "bg-muted text-muted-foreground",
 };
 
 const GROUP_PURCHASE_STYLES: Record<GroupPurchaseStatus, string> = {

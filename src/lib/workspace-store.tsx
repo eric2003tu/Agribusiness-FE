@@ -46,6 +46,7 @@ import {
   type NotificationKind,
   type NotificationLog,
   type ParticipantStatus,
+  type PaymentMethod,
   type ProduceListing,
   type Rating,
   type RequestStatus,
@@ -53,8 +54,32 @@ import {
   type Transaction,
   type TransactionStatus,
   type TransportOffer,
+  type Unit,
   type User,
 } from "./mock-data";
+
+export type CartItemKind = "produce" | "input";
+
+export interface CartLine {
+  kind: CartItemKind;
+  listingId: string;
+  quantity: number;
+  /** buyer's proposed price — only meaningful for a negotiable produce listing */
+  offerPrice?: number;
+}
+
+export interface ResolvedCartLine extends CartLine {
+  productId: string;
+  productName: string;
+  unit: Unit;
+  sellerId: string;
+  sellerName: string;
+  unitPrice: number | null;
+  maxQuantity: number;
+  lineTotal: number | null;
+  photo?: string | undefined;
+  available: boolean;
+}
 
 type Ability = "moderate" | "manageOwnListings" | "manageOwnRequests" | "manageOwnInputs";
 
@@ -148,6 +173,18 @@ interface WorkspaceContextValue {
   resolveDispute: (id: string) => void;
   rateTransaction: (id: string, score: number, comment?: string) => void;
   ratingsForUser: (userId: string) => Rating[];
+  requestRefund: (id: string, reason: string) => void;
+  resolveRefund: (id: string, approve: boolean) => void;
+
+  cartItems: CartLine[];
+  cartLines: ResolvedCartLine[];
+  cartCount: number;
+  cartTotal: number;
+  addToCart: (kind: CartItemKind, listingId: string, quantity: number, offerPrice?: number) => void;
+  updateCartQuantity: (kind: CartItemKind, listingId: string, quantity: number) => void;
+  removeFromCart: (kind: CartItemKind, listingId: string) => void;
+  clearCart: () => void;
+  placeOrder: (paymentMethod: PaymentMethod) => boolean;
 
   messageThreads: MessageThread[];
   messages: Message[];
@@ -204,6 +241,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [allNotifications, setAllNotifications] = useState<NotificationLog[]>(seedNotificationLog);
   const [allEndorsements, setAllEndorsements] = useState<Endorsement[]>(seedEndorsements);
   const [allTransportOffers, setAllTransportOffers] = useState<TransportOffer[]>(seedTransportOffers);
+  const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const alertedListingIds = useRef<Set<string>>(new Set());
@@ -451,6 +489,236 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return true;
     },
     [allProduceListings, currentUser, notify],
+  );
+
+  /* ---------------------------------- Cart ---------------------------------- */
+
+  const addToCart: WorkspaceContextValue["addToCart"] = useCallback(
+    (kind, listingId, quantity, offerPrice) => {
+      if (quantity <= 0) return;
+      if (kind === "produce") {
+        const listing = allProduceListings.find((l) => l.id === listingId);
+        if (!listing || listing.status !== "available") {
+          toast.error("This listing is no longer available");
+          return;
+        }
+        if (listing.sellerId === currentUser.id) {
+          toast.error("You can't buy your own listing");
+          return;
+        }
+        if (listing.negotiable && (!offerPrice || offerPrice <= 0)) {
+          toast.error("Enter your offer price", { description: "This listing is negotiable." });
+          return;
+        }
+        setCartItems((prev) => {
+          const existing = prev.find((l) => l.kind === "produce" && l.listingId === listingId);
+          const nextQty = Math.min(listing.quantity, (existing?.quantity ?? 0) + quantity);
+          if (existing) {
+            const nextOfferPrice = offerPrice ?? existing.offerPrice;
+            return prev.map((l) =>
+              l.kind === "produce" && l.listingId === listingId
+                ? { ...l, quantity: nextQty, ...(nextOfferPrice !== undefined ? { offerPrice: nextOfferPrice } : {}) }
+                : l,
+            );
+          }
+          return [
+            ...prev,
+            { kind: "produce" as const, listingId, quantity: nextQty, ...(offerPrice !== undefined ? { offerPrice } : {}) },
+          ];
+        });
+      } else {
+        const listing = allInputListings.find((l) => l.id === listingId);
+        if (!listing) {
+          toast.error("This listing no longer exists");
+          return;
+        }
+        if (listing.supplierId === currentUser.id) {
+          toast.error("You can't buy your own listing");
+          return;
+        }
+        setCartItems((prev) => {
+          const existing = prev.find((l) => l.kind === "input" && l.listingId === listingId);
+          const nextQty = Math.min(listing.stockQty, (existing?.quantity ?? 0) + quantity);
+          if (existing) {
+            return prev.map((l) =>
+              l.kind === "input" && l.listingId === listingId ? { ...l, quantity: nextQty } : l,
+            );
+          }
+          return [...prev, { kind: "input" as const, listingId, quantity: nextQty }];
+        });
+      }
+      toast.success("Added to cart");
+    },
+    [allProduceListings, allInputListings, currentUser],
+  );
+
+  const updateCartQuantity: WorkspaceContextValue["updateCartQuantity"] = useCallback(
+    (kind, listingId, quantity) => {
+      setCartItems((prev) => {
+        if (quantity <= 0) return prev.filter((l) => !(l.kind === kind && l.listingId === listingId));
+        return prev.map((l) => (l.kind === kind && l.listingId === listingId ? { ...l, quantity } : l));
+      });
+    },
+    [],
+  );
+
+  const removeFromCart: WorkspaceContextValue["removeFromCart"] = useCallback((kind, listingId) => {
+    setCartItems((prev) => prev.filter((l) => !(l.kind === kind && l.listingId === listingId)));
+  }, []);
+
+  const clearCart = useCallback(() => setCartItems([]), []);
+
+  const cartLines: ResolvedCartLine[] = useMemo(
+    () =>
+      cartItems.map((line) => {
+        if (line.kind === "produce") {
+          const listing = allProduceListings.find((l) => l.id === line.listingId);
+          const product = productById(listing?.productId);
+          const seller = allUsers.find((u) => u.id === listing?.sellerId);
+          const unitPrice = listing?.negotiable ? (line.offerPrice ?? null) : (listing?.unitPrice ?? null);
+          return {
+            ...line,
+            productId: listing?.productId ?? "",
+            productName: product?.name ?? "Unknown product",
+            unit: listing?.unit ?? "kg",
+            sellerId: listing?.sellerId ?? "",
+            sellerName: seller?.name ?? "Unknown seller",
+            unitPrice,
+            maxQuantity: listing?.quantity ?? 0,
+            lineTotal: unitPrice ? unitPrice * line.quantity : null,
+            photo: listing?.photos?.[0],
+            available: !!listing && listing.status === "available",
+          };
+        }
+        const listing = allInputListings.find((l) => l.id === line.listingId);
+        const product = productById(listing?.productId);
+        const seller = allUsers.find((u) => u.id === listing?.supplierId);
+        return {
+          ...line,
+          productId: listing?.productId ?? "",
+          productName: product?.name ?? "Unknown product",
+          unit: listing?.unit ?? "kg",
+          sellerId: listing?.supplierId ?? "",
+          sellerName: seller?.name ?? "Unknown supplier",
+          unitPrice: listing?.price ?? null,
+          maxQuantity: listing?.stockQty ?? 0,
+          lineTotal: listing ? listing.price * line.quantity : null,
+          photo: listing?.photos?.[0],
+          available: !!listing,
+        };
+      }),
+    [cartItems, allProduceListings, allInputListings, allUsers],
+  );
+
+  // Number of distinct lines, not the sum of physical quantities — kg/litre
+  // amounts don't mean anything added across different products.
+  const cartCount = cartItems.length;
+  const cartTotal = useMemo(() => cartLines.reduce((s, l) => s + (l.lineTotal ?? 0), 0), [cartLines]);
+
+  const placeOrder: WorkspaceContextValue["placeOrder"] = useCallback(
+    (paymentMethod) => {
+      if (cartItems.length === 0) {
+        toast.error("Your cart is empty");
+        return false;
+      }
+      const now = new Date().toISOString().slice(0, 10);
+      const createdTransactions: Transaction[] = [];
+      const produceUpdates = new Map<string, number>();
+      const inputUpdates = new Map<string, number>();
+      const succeededKeys = new Set<string>();
+      let skipped = 0;
+
+      cartItems.forEach((line, index) => {
+        const key = `${line.kind}__${line.listingId}`;
+        if (line.kind === "produce") {
+          const listing = allProduceListings.find((l) => l.id === line.listingId);
+          const price = listing?.negotiable ? line.offerPrice : listing?.unitPrice;
+          if (!listing || listing.status !== "available" || line.quantity > listing.quantity || !price || price <= 0) {
+            skipped += 1;
+            return;
+          }
+          createdTransactions.push({
+            id: `TX-${Date.now()}-${index}`,
+            buyerId: currentUser.id,
+            sellerId: listing.sellerId,
+            groupId: null,
+            productId: listing.productId,
+            quantity: line.quantity,
+            unit: listing.unit,
+            unitPrice: price,
+            status: "pending",
+            confirmedBySeller: false,
+            confirmedByBuyer: false,
+            paymentMethod,
+            createdAt: now,
+            completedAt: null,
+          });
+          produceUpdates.set(line.listingId, (produceUpdates.get(line.listingId) ?? 0) + line.quantity);
+          succeededKeys.add(key);
+        } else {
+          const listing = allInputListings.find((l) => l.id === line.listingId);
+          if (!listing || line.quantity > listing.stockQty) {
+            skipped += 1;
+            return;
+          }
+          createdTransactions.push({
+            id: `TX-${Date.now()}-${index}`,
+            buyerId: currentUser.id,
+            sellerId: listing.supplierId,
+            groupId: null,
+            productId: listing.productId,
+            quantity: line.quantity,
+            unit: listing.unit,
+            unitPrice: listing.price,
+            status: "pending",
+            confirmedBySeller: false,
+            confirmedByBuyer: false,
+            paymentMethod,
+            createdAt: now,
+            completedAt: null,
+          });
+          inputUpdates.set(line.listingId, (inputUpdates.get(line.listingId) ?? 0) + line.quantity);
+          succeededKeys.add(key);
+        }
+      });
+
+      if (createdTransactions.length === 0) {
+        toast.error("Nothing could be ordered", { description: "Those items are no longer available." });
+        return false;
+      }
+
+      setAllProduceListings((prev) =>
+        prev.map((l) => {
+          const sub = produceUpdates.get(l.id);
+          if (!sub) return l;
+          const remaining = l.quantity - sub;
+          return remaining > 0 ? { ...l, quantity: remaining } : { ...l, status: "sold" as const };
+        }),
+      );
+      setAllInputListings((prev) =>
+        prev.map((l) => {
+          const sub = inputUpdates.get(l.id);
+          return sub ? { ...l, stockQty: l.stockQty - sub } : l;
+        }),
+      );
+      setAllTransactions((prev) => [...createdTransactions, ...prev]);
+      setCartItems((prev) => prev.filter((l) => !succeededKeys.has(`${l.kind}__${l.listingId}`)));
+
+      const sellerIds = new Set(createdTransactions.map((t) => t.sellerId));
+      sellerIds.forEach((sellerId) =>
+        notify(sellerId, "transaction", "New order", `${currentUser.name} placed a new order.`),
+      );
+
+      if (skipped > 0) {
+        toast.success("Order placed", {
+          description: `${createdTransactions.length} item(s) ordered — ${skipped} item(s) were no longer available and stayed in your cart.`,
+        });
+      } else {
+        toast.success("Order placed", { description: "Track it from your transactions." });
+      }
+      return true;
+    },
+    [cartItems, allProduceListings, allInputListings, currentUser, notify],
   );
 
   /* -------------------------------- Requests -------------------------------- */
@@ -1195,6 +1463,47 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [allTransactions, notify],
   );
 
+  const requestRefund: WorkspaceContextValue["requestRefund"] = useCallback(
+    (id, reason) => {
+      const tx = allTransactions.find((t) => t.id === id);
+      if (!tx) return;
+      setAllTransactions((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, status: "refund_requested", refundReason: reason } : t)),
+      );
+      const otherParty = currentUser.id === tx.buyerId ? tx.sellerId : tx.buyerId;
+      notify(otherParty, "transaction", "Refund requested", reason);
+      allUsers
+        .filter((u) => u.roles.includes("admin"))
+        .forEach((admin) => notify(admin.id, "transaction", "Refund requested", reason));
+      toast.success("Refund requested", { description: "An admin will review this transaction." });
+    },
+    [allTransactions, allUsers, currentUser, notify],
+  );
+
+  const resolveRefund: WorkspaceContextValue["resolveRefund"] = useCallback(
+    (id, approve) => {
+      const tx = allTransactions.find((t) => t.id === id);
+      if (!tx) return;
+      setAllTransactions((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, status: approve ? "refunded" : "completed" } : t)),
+      );
+      notify(
+        tx.buyerId,
+        "transaction",
+        approve ? "Refund approved" : "Refund denied",
+        approve ? "Your refund was approved." : "Your refund request was denied.",
+      );
+      notify(
+        tx.sellerId,
+        "transaction",
+        approve ? "Refund approved" : "Refund denied",
+        approve ? "A refund was issued to the buyer." : "The refund request was denied.",
+      );
+      toast.success(approve ? "Refund approved" : "Refund denied");
+    },
+    [allTransactions, notify],
+  );
+
   const rateTransaction: WorkspaceContextValue["rateTransaction"] = useCallback(
     (id, score, comment) => {
       const tx = allTransactions.find((t) => t.id === id);
@@ -1525,6 +1834,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     resolveDispute,
     rateTransaction,
     ratingsForUser,
+    requestRefund,
+    resolveRefund,
+
+    cartItems,
+    cartLines,
+    cartCount,
+    cartTotal,
+    addToCart,
+    updateCartQuantity,
+    removeFromCart,
+    clearCart,
+    placeOrder,
 
     messageThreads: allThreads,
     messages: allMessages,

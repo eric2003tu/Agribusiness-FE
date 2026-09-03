@@ -10,7 +10,7 @@ import { ReliabilityBadge } from "@/components/reliability-badge";
 import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
-import { productById } from "@/lib/mock-data";
+import { PAYMENT_METHOD_LABELS, productById } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/transactions/$transactionId")({
@@ -27,6 +27,8 @@ function TransactionDetail() {
     confirmTransaction,
     raiseDispute,
     resolveDispute,
+    requestRefund,
+    resolveRefund,
     rateTransaction,
     ratingsForUser,
     can,
@@ -34,6 +36,8 @@ function TransactionDetail() {
   const tx = transactions.find((t) => t.id === transactionId);
   const [disputeReason, setDisputeReason] = useState("");
   const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [showRefundForm, setShowRefundForm] = useState(false);
   const [ratingScore, setRatingScore] = useState(5);
   const [ratingComment, setRatingComment] = useState("");
 
@@ -97,6 +101,12 @@ function TransactionDetail() {
                     <dd className="font-medium text-foreground">{tx.completedAt ?? "—"}</dd>
                   </div>
                   <div>
+                    <dt className="text-muted-foreground">Payment method</dt>
+                    <dd className="font-medium text-foreground">
+                      {tx.paymentMethod ? PAYMENT_METHOD_LABELS[tx.paymentMethod] : "—"}
+                    </dd>
+                  </div>
+                  <div>
                     <dt className="text-muted-foreground">Seller confirmed</dt>
                     <dd className="mt-0.5 flex items-center gap-1.5 font-medium text-foreground">
                       {tx.confirmedBySeller ? (
@@ -131,7 +141,15 @@ function TransactionDetail() {
 
             {tx.status === "disputed" && tx.disputeReason && (
               <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-                {tx.disputeReason}
+                <p className="font-medium">Dispute reason</p>
+                <p className="mt-0.5">{tx.disputeReason}</p>
+              </div>
+            )}
+
+            {(tx.status === "refund_requested" || tx.status === "refunded") && tx.refundReason && (
+              <div className="mt-5 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground">
+                <p className="font-medium">Refund reason</p>
+                <p className="mt-0.5">{tx.refundReason}</p>
               </div>
             )}
 
@@ -156,6 +174,21 @@ function TransactionDetail() {
                   Resolve dispute
                 </Button>
               )}
+              {isBuyer && tx.status === "completed" && (
+                <Button size="sm" variant="outline" onClick={() => setShowRefundForm((s) => !s)}>
+                  Request refund
+                </Button>
+              )}
+              {can("moderate") && tx.status === "refund_requested" && (
+                <>
+                  <Button size="sm" onClick={() => resolveRefund(tx.id, true)}>
+                    Approve refund
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => resolveRefund(tx.id, false)}>
+                    Deny refund
+                  </Button>
+                </>
+              )}
             </div>
 
             {showDisputeForm && (
@@ -176,6 +209,28 @@ function TransactionDetail() {
                   }}
                 >
                   Submit dispute
+                </Button>
+              </div>
+            )}
+
+            {showRefundForm && (
+              <div className="mt-3 space-y-2">
+                <Textarea
+                  placeholder="Why are you requesting a refund?"
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  rows={3}
+                />
+                <Button
+                  size="sm"
+                  disabled={!refundReason.trim()}
+                  onClick={() => {
+                    requestRefund(tx.id, refundReason);
+                    setRefundReason("");
+                    setShowRefundForm(false);
+                  }}
+                >
+                  Submit refund request
                 </Button>
               </div>
             )}
