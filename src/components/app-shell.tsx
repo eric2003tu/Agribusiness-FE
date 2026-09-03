@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoader } from "@/components/page-loader";
 import { useWorkspace } from "@/lib/workspace-store";
 import { ROLE_LABELS, primaryRole, type Role } from "@/lib/mock-data";
 
@@ -43,17 +43,7 @@ export function AppShell({
   const allowed = !allowedRoles || currentUser.roles.some((r) => allowedRoles.includes(r));
 
   if (!ready || !session) {
-    return (
-      <div className="flex min-h-screen flex-col gap-4 bg-background p-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 w-full" />
-          ))}
-        </div>
-        <Skeleton className="h-72 w-full" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
