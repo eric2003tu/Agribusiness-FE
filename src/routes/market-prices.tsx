@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Sparkles } from "lucide-react";
+import { Sparkles, TrendingUp, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,10 +44,14 @@ function MarketPricesPage() {
     [marketPriceRecords, productId],
   );
   const cheapest = rows[0];
+  const priciest = rows[rows.length - 1];
+  const average = rows.length > 0 ? Math.round(rows.reduce((s, r) => s + r.avgPrice, 0) / rows.length) : 0;
+  const unit = productById(productId)?.defaultUnit ?? "kg";
 
-  const chartData = [...rows]
-    .sort((a, b) => a.avgPrice - b.avgPrice)
-    .map((r) => ({ district: locationById(r.districtId)?.name ?? r.districtId, avgPrice: r.avgPrice }));
+  const chartData = rows.map((r) => ({
+    district: locationById(r.districtId)?.name ?? r.districtId,
+    avgPrice: r.avgPrice,
+  }));
 
   return (
     <AppShell
@@ -55,54 +59,87 @@ function MarketPricesPage() {
       description="Every district's recent price, cheapest first — find where to buy, then jump straight to listings."
     >
       <div className="surface-card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <ProductIllustration productId={productId} className="size-12" rounded="rounded-lg" />
-            <div className="grid gap-2">
-              <Label>Product</Label>
-              <Select value={productId} onValueChange={setProductId}>
-                <SelectTrigger className="w-64">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {produceProducts.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="flex items-center gap-3">
+          <ProductIllustration productId={productId} className="size-12" rounded="rounded-lg" />
+          <div className="grid gap-2">
+            <Label>Product</Label>
+            <Select value={productId} onValueChange={setProductId}>
+              <SelectTrigger className="w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {produceProducts.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-
-          {cheapest && (
-            <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm">
-              <p className="flex items-center gap-1.5 font-medium text-success">
-                <Sparkles className="size-3.5" /> Cheapest right now
-              </p>
-              <p className="text-foreground">
-                {formatRwf(cheapest.avgPrice)}/{productById(cheapest.productId)?.defaultUnit} in{" "}
-                {locationById(cheapest.districtId)?.name}
-              </p>
-            </div>
-          )}
         </div>
 
-        {chartData.length > 0 ? (
+        {rows.length > 0 ? (
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-success/30 bg-success/10 p-4">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-success">
+                <Sparkles className="size-3.5" /> Cheapest
+              </p>
+              <p className="mt-1 text-lg font-semibold text-foreground">
+                {formatRwf(cheapest!.avgPrice)}/{unit}
+              </p>
+              <p className="text-xs text-muted-foreground">{locationById(cheapest!.districtId)?.name}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/40 p-4">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                <Wallet className="size-3.5" /> District average
+              </p>
+              <p className="mt-1 text-lg font-semibold text-foreground">
+                {formatRwf(average)}/{unit}
+              </p>
+              <p className="text-xs text-muted-foreground">across {rows.length} districts</p>
+            </div>
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-4">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-warning">
+                <TrendingUp className="size-3.5" /> Most expensive
+              </p>
+              <p className="mt-1 text-lg font-semibold text-foreground">
+                {formatRwf(priciest!.avgPrice)}/{unit}
+              </p>
+              <p className="text-xs text-muted-foreground">{locationById(priciest!.districtId)?.name}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-5 text-sm text-muted-foreground">No price records for this product yet.</p>
+        )}
+
+        {chartData.length > 0 && (
           <ChartContainer
-            config={{ avgPrice: { label: "Avg price (RWF)", color: "var(--chart-1)" } }}
-            className="mt-6 h-64 w-full"
+            config={{ avgPrice: { label: `Avg price (RWF/${unit})`, color: "var(--chart-1)" } }}
+            className="mt-6 h-80 w-full"
           >
-            <BarChart data={chartData}>
+            <BarChart data={chartData} margin={{ bottom: 48 }}>
               <CartesianGrid vertical={false} />
-              <XAxis dataKey="district" tickLine={false} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} width={40} />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <XAxis
+                dataKey="district"
+                tickLine={false}
+                axisLine={false}
+                interval={0}
+                angle={-35}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                width={56}
+                tickFormatter={(value: number) => `${value}/${unit}`}
+              />
+              <ChartTooltip
+                content={<ChartTooltipContent formatter={(value) => `${formatRwf(Number(value))}/${unit}`} />}
+              />
               <Bar dataKey="avgPrice" fill="var(--color-avgPrice)" radius={4} />
             </BarChart>
           </ChartContainer>
-        ) : (
-          <p className="mt-6 text-sm text-muted-foreground">No price records for this product yet.</p>
         )}
       </div>
 

@@ -1319,7 +1319,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       sampleDate: new Date().toISOString().slice(0, 10),
       source: "transaction" as const,
     }));
-    return [...derived, ...allPriceRecords];
+    const derivedKeys = new Set(derived.map((d) => `${d.productId}__${d.districtId}`));
+    const supplementalSeed = allPriceRecords.filter(
+      (r) => !derivedKeys.has(`${r.productId}__${r.districtId}`),
+    );
+    return [...derived, ...supplementalSeed];
   }, [allTransactions, allUsers, allPriceRecords]);
 
   /* ------------------------------- Notifications ------------------------------ */

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PhotoUploader } from "@/components/photo-uploader";
 import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
-import { locations, products, type ListingScope, type Unit } from "@/lib/mock-data";
+import { formatQuantity, formatRwf } from "@/lib/format";
+import { districtOf, locationLabel, locations, productById, products, type ListingScope, type Unit } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/listings/new")({
   head: () => ({ meta: [{ title: "New listing — Agribridge" }] }),
@@ -20,7 +22,7 @@ const produceProducts = products.filter((p) => p.type === "produce");
 const villageAndUpLocations = locations.filter((l) => l.level !== "region");
 
 function NewListingPage() {
-  const { addListing } = useWorkspace();
+  const { addListing, currentUser, marketPriceRecords } = useWorkspace();
   const navigate = useNavigate();
   const [productId, setProductId] = useState(produceProducts[0]?.id ?? "");
   const [quantity, setQuantity] = useState("");
@@ -32,6 +34,12 @@ function NewListingPage() {
   const [qualityGrade, setQualityGrade] = useState("");
   const [listingScope, setListingScope] = useState<ListingScope>("commercial");
   const [photos, setPhotos] = useState<string[]>([]);
+
+  const product = productById(productId);
+  const district = districtOf(locationId);
+  const marketPrice = marketPriceRecords
+    .filter((r) => r.productId === productId && r.districtId === district?.id)
+    .sort((a, b) => a.avgPrice - b.avgPrice)[0];
 
   function submit() {
     const qty = Number(quantity);
@@ -56,147 +64,199 @@ function NewListingPage() {
 
   return (
     <AppShell title="New produce listing" description="List your harvest for buyers and other farmers to find.">
-      <form
-        className="surface-card mx-auto max-w-2xl space-y-5 p-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit();
-        }}
-      >
-        <div className="flex items-end gap-3">
-          <ProductIllustration productId={productId} className="size-14" />
-          <div className="grid flex-1 gap-2">
-            <Label>Product</Label>
-            <Select value={productId} onValueChange={setProductId}>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <form
+          className="surface-card space-y-5 p-6 lg:col-span-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <div className="flex items-end gap-3">
+            <ProductIllustration productId={productId} className="size-14" />
+            <div className="grid flex-1 gap-2">
+              <Label>Product</Label>
+              <Select value={productId} onValueChange={setProductId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {produceProducts.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {marketPrice && (
+            <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary-soft px-3 py-2 text-sm text-primary">
+              <Sparkles className="size-3.5 shrink-0" />
+              Market price in {district?.name}: {formatRwf(marketPrice.avgPrice)}/{product?.defaultUnit}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="quantity">Quantity</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Unit</Label>
+              <Select value={unit} onValueChange={(v) => setUnit(v as Unit)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kg">kg</SelectItem>
+                  <SelectItem value="ton">ton</SelectItem>
+                  <SelectItem value="bag">bag (50kg)</SelectItem>
+                  <SelectItem value="litre">litre</SelectItem>
+                  <SelectItem value="piece">piece</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">Negotiable price</p>
+              <p className="text-xs text-muted-foreground">Let buyers propose their own price.</p>
+            </div>
+            <Switch checked={negotiable} onCheckedChange={setNegotiable} />
+          </div>
+
+          {!negotiable && (
+            <div className="grid gap-2">
+              <Label htmlFor="price">Unit price (RWF)</Label>
+              <Input
+                id="price"
+                type="number"
+                min={0}
+                value={unitPrice}
+                onChange={(e) => setUnitPrice(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div className="grid gap-2">
+            <Label>Location</Label>
+            <Select value={locationId} onValueChange={setLocationId}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {produceProducts.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
+                {villageAndUpLocations.map((l) => (
+                  <SelectItem key={l.id} value={l.id}>
+                    {l.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="quantity">Quantity</Label>
-            <Input
-              id="quantity"
-              type="number"
-              min={1}
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="harvest">Harvest date</Label>
+              <Input
+                id="harvest"
+                type="date"
+                value={harvestDate}
+                onChange={(e) => setHarvestDate(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="grade">Quality grade (optional)</Label>
+              <Input
+                id="grade"
+                placeholder="Grade A"
+                value={qualityGrade}
+                onChange={(e) => setQualityGrade(e.target.value)}
+              />
+            </div>
           </div>
+
           <div className="grid gap-2">
-            <Label>Unit</Label>
-            <Select value={unit} onValueChange={(v) => setUnit(v as Unit)}>
+            <Label>Photos (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Buyers see a generic product picture until you add your own.
+            </p>
+            <PhotoUploader photos={photos} onChange={setPhotos} />
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Listing scope</Label>
+            <Select value={listingScope} onValueChange={(v) => setListingScope(v as ListingScope)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="kg">kg</SelectItem>
-                <SelectItem value="ton">ton</SelectItem>
-                <SelectItem value="bag">bag (50kg)</SelectItem>
-                <SelectItem value="litre">litre</SelectItem>
-                <SelectItem value="piece">piece</SelectItem>
+                <SelectItem value="commercial">Commercial — open to any buyer</SelectItem>
+                <SelectItem value="peer">Peer-to-peer — nearby farmers only</SelectItem>
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        <div className="flex items-center justify-between rounded-lg border border-border p-3">
-          <div>
-            <p className="text-sm font-medium text-foreground">Negotiable price</p>
-            <p className="text-xs text-muted-foreground">Let buyers propose their own price.</p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => navigate({ to: "/listings" })}>
+              Cancel
+            </Button>
+            <Button type="submit">Publish listing</Button>
           </div>
-          <Switch checked={negotiable} onCheckedChange={setNegotiable} />
-        </div>
+        </form>
 
-        {!negotiable && (
-          <div className="grid gap-2">
-            <Label htmlFor="price">Unit price (RWF)</Label>
-            <Input
-              id="price"
-              type="number"
-              min={0}
-              value={unitPrice}
-              onChange={(e) => setUnitPrice(e.target.value)}
-            />
-          </div>
-        )}
-
-        <div className="grid gap-2">
-          <Label>Location</Label>
-          <Select value={locationId} onValueChange={setLocationId}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {villageAndUpLocations.map((l) => (
-                <SelectItem key={l.id} value={l.id}>
-                  {l.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-6">
+          <section className="surface-card sticky top-20 overflow-hidden">
+            {photos[0] ? (
+              <img src={photos[0]} alt="Listing preview" className="h-40 w-full object-cover" />
+            ) : (
+              <ProductIllustration productId={productId} className="h-40 w-full" rounded="rounded-none" />
+            )}
+            <div className="p-5">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{product?.name ?? "Product"}</p>
+              <p className="text-sm text-muted-foreground">Listed by {currentUser.name}</p>
+              <dl className="mt-4 space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Quantity</dt>
+                  <dd className="font-medium text-foreground">
+                    {quantity ? formatQuantity(Number(quantity), unit) : "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Price</dt>
+                  <dd className="font-medium text-foreground">
+                    {negotiable ? "Negotiable" : unitPrice ? `${formatRwf(Number(unitPrice))}/${unit}` : "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Location</dt>
+                  <dd className="text-right font-medium text-foreground">{locationLabel(locationId)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Harvest date</dt>
+                  <dd className="font-medium text-foreground">{harvestDate}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Scope</dt>
+                  <dd className="font-medium text-foreground">
+                    {listingScope === "peer" ? "Peer-to-peer" : "Commercial"}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </section>
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="harvest">Harvest date</Label>
-            <Input
-              id="harvest"
-              type="date"
-              value={harvestDate}
-              onChange={(e) => setHarvestDate(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="grade">Quality grade (optional)</Label>
-            <Input
-              id="grade"
-              placeholder="Grade A"
-              value={qualityGrade}
-              onChange={(e) => setQualityGrade(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-2">
-          <Label>Photos (optional)</Label>
-          <p className="text-xs text-muted-foreground">
-            Buyers see a generic product picture until you add your own.
-          </p>
-          <PhotoUploader photos={photos} onChange={setPhotos} />
-        </div>
-
-        <div className="grid gap-2">
-          <Label>Listing scope</Label>
-          <Select value={listingScope} onValueChange={(v) => setListingScope(v as ListingScope)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="commercial">Commercial — open to any buyer</SelectItem>
-              <SelectItem value="peer">Peer-to-peer — nearby farmers only</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => navigate({ to: "/listings" })}>
-            Cancel
-          </Button>
-          <Button type="submit">Publish listing</Button>
-        </div>
-      </form>
+      </div>
     </AppShell>
   );
 }
