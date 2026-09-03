@@ -11,7 +11,7 @@ import { PhotoUploader } from "@/components/photo-uploader";
 import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity, formatRwf } from "@/lib/format";
-import { districtOf, locationLabel, locations, productById, products, type ListingScope, type Unit } from "@/lib/mock-data";
+import { DISTRICTS, districtOf, locationLabel, locations, productById, products, type ListingScope, type Unit } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/listings/new")({
   head: () => ({ meta: [{ title: "New listing — Agribridge" }] }),
@@ -19,7 +19,12 @@ export const Route = createFileRoute("/listings/new")({
 });
 
 const produceProducts = products.filter((p) => p.type === "produce");
-const villageAndUpLocations = locations.filter((l) => l.level !== "region");
+
+function subLocationsOf(districtId: string) {
+  return locations.filter(
+    (l) => l.level !== "region" && l.level !== "district" && districtOf(l.id)?.id === districtId,
+  );
+}
 
 function NewListingPage() {
   const { addListing, currentUser, marketPriceRecords } = useWorkspace();
@@ -29,21 +34,37 @@ function NewListingPage() {
   const [unit, setUnit] = useState<Unit>("kg");
   const [negotiable, setNegotiable] = useState(false);
   const [unitPrice, setUnitPrice] = useState("");
-  const [locationId, setLocationId] = useState(villageAndUpLocations[0]?.id ?? "");
+  const [districtId, setDistrictId] = useState(DISTRICTS[0]?.id ?? "");
+  const [locationId, setLocationId] = useState(DISTRICTS[0]?.id ?? "");
   const [harvestDate, setHarvestDate] = useState(new Date().toISOString().slice(0, 10));
   const [qualityGrade, setQualityGrade] = useState("");
   const [listingScope, setListingScope] = useState<ListingScope>("commercial");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [error, setError] = useState("");
 
   const product = productById(productId);
-  const district = districtOf(locationId);
+  const district = DISTRICTS.find((d) => d.id === districtId);
+  const subLocations = subLocationsOf(districtId);
   const marketPrice = marketPriceRecords
-    .filter((r) => r.productId === productId && r.districtId === district?.id)
+    .filter((r) => r.productId === productId && r.districtId === districtId)
     .sort((a, b) => a.avgPrice - b.avgPrice)[0];
+
+  function handleDistrictChange(next: string) {
+    setDistrictId(next);
+    setLocationId(next);
+  }
 
   function submit() {
     const qty = Number(quantity);
-    if (!productId || !qty || qty <= 0 || !locationId) return;
+    if (!productId || !qty || qty <= 0 || !locationId) {
+      setError("Fill in a valid quantity.");
+      return;
+    }
+    if (photos.length === 0) {
+      setError("Add at least one product photo — buyers trust listings with real photos.");
+      return;
+    }
+    setError("");
     const expires = new Date();
     expires.setDate(expires.getDate() + 30);
     addListing({
@@ -57,7 +78,7 @@ function NewListingPage() {
       ...(qualityGrade ? { qualityGrade } : {}),
       listingScope,
       expiresAt: expires.toISOString().slice(0, 10),
-      ...(photos.length > 0 ? { photos } : {}),
+      photos,
     });
     void navigate({ to: "/listings" });
   }
@@ -148,20 +169,38 @@ function NewListingPage() {
             </div>
           )}
 
-          <div className="grid gap-2">
-            <Label>Location</Label>
-            <Select value={locationId} onValueChange={setLocationId}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {villageAndUpLocations.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
-                    {l.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>District</Label>
+              <Select value={districtId} onValueChange={handleDistrictChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DISTRICTS.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Specific area (optional)</Label>
+              <Select value={locationId} onValueChange={setLocationId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={districtId}>Whole district</SelectItem>
+                  {subLocations.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -186,9 +225,9 @@ function NewListingPage() {
           </div>
 
           <div className="grid gap-2">
-            <Label>Photos (optional)</Label>
+            <Label>Product photos</Label>
             <p className="text-xs text-muted-foreground">
-              Buyers see a generic product picture until you add your own.
+              Add at least one real photo of your harvest — listings with photos sell faster.
             </p>
             <PhotoUploader photos={photos} onChange={setPhotos} />
           </div>
@@ -205,6 +244,8 @@ function NewListingPage() {
               </SelectContent>
             </Select>
           </div>
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => navigate({ to: "/listings" })}>

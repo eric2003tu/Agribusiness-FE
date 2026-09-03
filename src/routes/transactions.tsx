@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
-import { AlertTriangle, CheckCircle2, ShoppingCart } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RotateCcw, ShoppingCart } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
@@ -90,7 +90,7 @@ function TransactionsPage() {
 
   return (
     <AppShell title="Transactions" description="Track every deal from agreement to completion.">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard icon={ShoppingCart} title="Total" value={rows.length} tone="brand" />
         <StatCard
           icon={CheckCircle2}
@@ -103,6 +103,12 @@ function TransactionsPage() {
           title="Disputed"
           value={rows.filter((t) => t.status === "disputed").length}
           tone={rows.some((t) => t.status === "disputed") ? "danger" : "success"}
+        />
+        <StatCard
+          icon={RotateCcw}
+          title="Refund requests"
+          value={rows.filter((t) => t.status === "refund_requested").length}
+          tone={rows.some((t) => t.status === "refund_requested") ? "warning" : "success"}
         />
         <StatCard
           icon={ShoppingCart}

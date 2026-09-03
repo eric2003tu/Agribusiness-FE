@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
-import { Building2, MapPinned, Package, PackageX, Plus, ShieldCheck } from "lucide-react";
+import { Building2, MapPinned, Package, PackageX, Plus, ShieldCheck, ShoppingCart } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
@@ -57,7 +57,7 @@ export function CategoryBadge({ input }: { input: InputListing }) {
 
 function InputsPage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { inputListings, userById, can } = useWorkspace();
+  const { inputListings, userById, can, currentUser, hasRole, addToCart } = useWorkspace();
 
   if (pathname !== "/inputs") {
     return <Outlet />;
@@ -74,7 +74,11 @@ function InputsPage() {
       header: "Input",
       render: (l) => (
         <div className="flex items-center gap-3">
-          <ProductIllustration productId={l.productId} className="size-10" rounded="rounded-lg" />
+          {l.photos && l.photos[0] ? (
+            <img src={l.photos[0]} alt={productById(l.productId)?.name ?? "Input"} className="size-10 shrink-0 rounded-lg object-cover" />
+          ) : (
+            <ProductIllustration productId={l.productId} className="size-10" rounded="rounded-lg" />
+          )}
           <div className="min-w-0">
             <p className="font-medium text-foreground">{productById(l.productId)?.name ?? "—"}</p>
             <div className="mt-1">
@@ -138,11 +142,18 @@ function InputsPage() {
       key: "actions",
       header: "",
       render: (l) => (
-        <Button asChild size="sm" variant="outline">
-          <Link to="/inputs/$inputId" params={{ inputId: l.id }}>
-            View
-          </Link>
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          {hasRole("farmer") && l.supplierId !== currentUser.id && l.stockQty > 0 && (
+            <Button size="sm" variant="outline" onClick={() => addToCart("input", l.id, 1)}>
+              <ShoppingCart className="size-3.5" /> Add to cart
+            </Button>
+          )}
+          <Button asChild size="sm" variant="outline">
+            <Link to="/inputs/$inputId" params={{ inputId: l.id }}>
+              View
+            </Link>
+          </Button>
+        </div>
       ),
       exportValue: () => "",
     },

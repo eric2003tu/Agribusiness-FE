@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,11 +20,10 @@ export const Route = createFileRoute("/inputs/$inputId")({
 
 function InputDetail() {
   const { inputId } = Route.useParams();
-  const navigate = useNavigate();
   const {
     inputListings,
     userById,
-    orderInput,
+    addToCart,
     groupPurchases,
     pledgedQuantityFor,
     createGroupPurchase,
@@ -55,7 +54,20 @@ function InputDetail() {
         <div className="space-y-6 lg:col-span-2">
           <section className="surface-card p-5">
             <div className="flex flex-wrap items-start gap-5">
-              <ProductIllustration productId={listing.productId} className="h-28 w-28" />
+              {listing.photos && listing.photos.length > 0 ? (
+                <div className="flex gap-2 overflow-x-auto">
+                  {listing.photos.map((src, i) => (
+                    <img
+                      key={i}
+                      src={src}
+                      alt={`${product?.name ?? "Input"} photo ${i + 1}`}
+                      className="h-28 w-28 shrink-0 rounded-xl object-cover"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <ProductIllustration productId={listing.productId} className="h-28 w-28" />
+              )}
               <div className="min-w-[16rem] flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -111,13 +123,12 @@ function InputDetail() {
                   onClick={() => {
                     const qty = Number(quantity);
                     if (qty > 0) {
-                      orderInput(listing.id, qty);
+                      addToCart("input", listing.id, qty);
                       setQuantity("");
-                      void navigate({ to: "/transactions" });
                     }
                   }}
                 >
-                  Order now
+                  Add to cart
                 </Button>
               </div>
             )}

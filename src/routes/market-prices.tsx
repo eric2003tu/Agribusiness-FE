@@ -12,7 +12,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatRwf } from "@/lib/format";
-import { DISTRICTS, locationById, productById, products } from "@/lib/mock-data";
+import { DISTRICTS, districtOf, locationById, productById, products } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/market-prices")({
@@ -31,10 +31,22 @@ export const Route = createFileRoute("/market-prices")({
 const produceProducts = products.filter((p) => p.type === "produce");
 
 function MarketPricesPage() {
-  const { marketPriceRecords, addManualPriceRecord, can } = useWorkspace();
+  const { marketPriceRecords, addManualPriceRecord, can, produceListings } = useWorkspace();
   const [productId, setProductId] = useState(produceProducts[0]?.id ?? "");
   const [surveyDistrictId, setSurveyDistrictId] = useState(DISTRICTS[0]?.id ?? "");
   const [surveyPrice, setSurveyPrice] = useState("");
+
+  // A market-price row can exist for a product+district with no actual
+  // listings there yet — link to the broader product search instead of a
+  // filtered combination that would land on a dead, empty results page.
+  const districtsWithListings = useMemo(() => {
+    const set = new Set<string>();
+    produceListings.forEach((l) => {
+      const d = districtOf(l.locationId);
+      if (d) set.add(`${l.productId}__${d.id}`);
+    });
+    return set;
+  }, [produceListings]);
 
   const rows = useMemo(
     () =>
@@ -158,6 +170,7 @@ function MarketPricesPage() {
             <tbody className="divide-y divide-border">
               {rows.map((r) => {
                 const isCheapest = r.id === cheapest?.id;
+                const hasListings = districtsWithListings.has(`${r.productId}__${r.districtId}`);
                 return (
                   <tr key={r.id} className={cn(isCheapest && "bg-success/5")}>
                     <td className="p-3">
@@ -181,8 +194,11 @@ function MarketPricesPage() {
                     </td>
                     <td className="p-3 text-right">
                       <Button asChild size="sm" variant="outline">
-                        <Link to="/listings" search={{ product: r.productId, district: r.districtId }}>
-                          View listings
+                        <Link
+                          to="/listings"
+                          search={hasListings ? { product: r.productId, district: r.districtId } : { product: r.productId }}
+                        >
+                          {hasListings ? "View listings" : "View all listings"}
                         </Link>
                       </Button>
                     </td>

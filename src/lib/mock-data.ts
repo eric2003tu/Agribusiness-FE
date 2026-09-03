@@ -228,6 +228,8 @@ export interface InputListing {
   stockQty: number;
   deliveryDistrictIds: string[];
   createdAt: string;
+  /** compressed data-URL thumbnails, uploaded client-side */
+  photos?: string[];
 }
 
 export type GroupPurchaseStatus = "collecting" | "fulfilled" | "expired";
@@ -257,7 +259,13 @@ export interface GroupPurchasePledge {
 }
 
 export type TransactionStatus =
-  "pending" | "confirmed_by_seller" | "confirmed_by_buyer" | "completed" | "disputed";
+  | "pending"
+  | "confirmed_by_seller"
+  | "confirmed_by_buyer"
+  | "completed"
+  | "disputed"
+  | "refund_requested"
+  | "refunded";
 
 export const TRANSACTION_STATUS_LABELS: Record<TransactionStatus, string> = {
   pending: "Pending",
@@ -265,6 +273,15 @@ export const TRANSACTION_STATUS_LABELS: Record<TransactionStatus, string> = {
   confirmed_by_buyer: "Confirmed by buyer",
   completed: "Completed",
   disputed: "Disputed",
+  refund_requested: "Refund requested",
+  refunded: "Refunded",
+};
+
+export type PaymentMethod = "mobile_money" | "card";
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  mobile_money: "Mobile Money",
+  card: "Card",
 };
 
 export interface Transaction {
@@ -280,6 +297,8 @@ export interface Transaction {
   confirmedBySeller: boolean;
   confirmedByBuyer: boolean;
   disputeReason?: string;
+  refundReason?: string;
+  paymentMethod?: PaymentMethod;
   createdAt: string;
   completedAt: string | null;
 }
@@ -915,6 +934,12 @@ export const transactions: Transaction[] = [
   { id: "TX-6014", buyerId: "u11", sellerId: "u3", groupId: null, productId: "prod-irish-potato", quantity: 400, unit: "kg", unitPrice: 248, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-16), completedAt: day(-15) },
   { id: "TX-6015", buyerId: "u11", sellerId: "u8", groupId: null, productId: "prod-beans", quantity: 250, unit: "kg", unitPrice: 605, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, createdAt: day(-30), completedAt: day(-28) },
   { id: "TX-6016", buyerId: "u12", sellerId: "u9", groupId: null, productId: "prod-cassava", quantity: 300, unit: "kg", unitPrice: 180, status: "confirmed_by_buyer", confirmedBySeller: false, confirmedByBuyer: true, createdAt: day(-1), completedAt: null },
+  { id: "TX-6017", buyerId: "u11", sellerId: "u1", groupId: null, productId: "prod-maize", quantity: 150, unit: "kg", unitPrice: 320, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Several sacks arrived damp and part-spoiled.", paymentMethod: "mobile_money", createdAt: day(-6), completedAt: day(-4) },
+  { id: "TX-6018", buyerId: "u7", sellerId: "u14", groupId: null, productId: "prod-urea", quantity: 100, unit: "kg", unitPrice: 900, status: "refunded", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Wrong fertilizer type delivered — ordered DAP, received Urea.", paymentMethod: "card", createdAt: day(-20), completedAt: day(-18) },
+  { id: "TX-6019", buyerId: "u12", sellerId: "u2", groupId: null, productId: "prod-irish-potato", quantity: 300, unit: "kg", unitPrice: 250, status: "refund_requested", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Quality was below the Grade A agreed at purchase.", paymentMethod: "mobile_money", createdAt: day(-3), completedAt: day(-1) },
+  { id: "TX-6020", buyerId: "u11", sellerId: "u3", groupId: null, productId: "prod-tomato", quantity: 80, unit: "kg", unitPrice: 450, status: "completed", confirmedBySeller: true, confirmedByBuyer: true, paymentMethod: "card", createdAt: day(-2), completedAt: day(-1) },
+  { id: "TX-6021", buyerId: "u1", sellerId: "u14", groupId: null, productId: "prod-dap", quantity: 50, unit: "kg", unitPrice: 1050, status: "pending", confirmedBySeller: false, confirmedByBuyer: false, paymentMethod: "mobile_money", createdAt: day(0), completedAt: null },
+  { id: "TX-6022", buyerId: "u13", sellerId: "u16", groupId: null, productId: "prod-mancozeb", quantity: 10, unit: "litre", unitPrice: 6500, status: "refunded", confirmedBySeller: true, confirmedByBuyer: true, refundReason: "Sealed containers were already opened on arrival.", paymentMethod: "card", createdAt: day(-12), completedAt: day(-10) },
 ];
 
 export const ratings: Rating[] = [

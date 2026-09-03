@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Truck } from "lucide-react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { CheckCircle2, Clock3, Send, Truck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatCard } from "@/components/stat-card";
+import { Progress } from "@/components/ui/progress";
 import { UserAvatar } from "@/components/user-avatar";
+import { AggregationStatusBadge } from "@/components/status-badge";
+import { ProductIllustration } from "@/components/product-illustration";
 import { useWorkspace } from "@/lib/workspace-store";
 import { formatQuantity } from "@/lib/format";
 import { locationLabel, productById } from "@/lib/mock-data";
@@ -40,6 +43,11 @@ function TransportPoolPage() {
   const confirmedGroups = aggregationGroups.filter(
     (g) => g.status === "confirmed" || g.status === "partially_confirmed",
   );
+  const fullyConfirmed = confirmedGroups.filter((g) => g.status === "confirmed").length;
+  const partiallyConfirmed = confirmedGroups.filter((g) => g.status === "partially_confirmed").length;
+  const myOffers = confirmedGroups.filter((g) =>
+    offersForGroup(g.id).some((o) => o.transporterId === currentUser.id),
+  ).length;
 
   return (
     <AppShell
@@ -49,6 +57,9 @@ function TransportPoolPage() {
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Truck} title="Needs transport" value={confirmedGroups.length} tone="brand" />
+        <StatCard icon={CheckCircle2} title="Fully confirmed" value={fullyConfirmed} tone="success" />
+        <StatCard icon={Clock3} title="Partially confirmed" value={partiallyConfirmed} tone="warning" />
+        <StatCard icon={Send} title="My offers sent" value={myOffers} tone="soft" />
       </div>
 
       <div className="space-y-4">
@@ -68,21 +79,37 @@ function TransportPoolPage() {
             const lb = produceListings.find((l) => l.id === b.listingId)?.locationId ?? "";
             return locationLabel(la).localeCompare(locationLabel(lb));
           });
+          const allocated = accepted.reduce((s, p) => s + p.allocatedQuantity, 0);
+          const pct = Math.min(100, Math.round((allocated / g.targetQuantity) * 100));
           const offers = offersForGroup(g.id);
           const alreadyOffered = offers.some((o) => o.transporterId === currentUser.id);
 
           return (
             <section key={g.id} className="surface-card p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">
-                    {productById(request?.productId)?.name} — {formatQuantity(g.targetQuantity, g.unit)}
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Delivering to {buyer?.name} · {locationLabel(request?.deliveryLocationId)}
+              <div className="flex flex-wrap items-start gap-4">
+                <ProductIllustration productId={request?.productId} className="size-16 shrink-0" rounded="rounded-lg" />
+                <div className="min-w-[16rem] flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {productById(request?.productId)?.name} — {formatQuantity(g.targetQuantity, g.unit)}
+                    </h2>
+                    <AggregationStatusBadge status={g.status} />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Delivering to {buyer?.name ?? "unknown"} · {locationLabel(request?.deliveryLocationId)} · by{" "}
+                    {g.deadline}
+                  </p>
+                  <Progress value={pct} className="mt-3" />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatQuantity(allocated, g.unit)} confirmed of {formatQuantity(g.targetQuantity, g.unit)} ·{" "}
+                    {stops.length} pickup {stops.length === 1 ? "stop" : "stops"}
                   </p>
                 </div>
-                <span className="text-xs text-muted-foreground">{stops.length} pickup stop(s)</span>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/aggregation/$groupId" params={{ groupId: g.id }}>
+                    View group
+                  </Link>
+                </Button>
               </div>
 
               <ol className="mt-4 space-y-2">

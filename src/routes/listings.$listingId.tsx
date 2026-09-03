@@ -35,7 +35,7 @@ function ListingDetail() {
     renewListing,
     matchingRequestsForListing,
     startThread,
-    buyListing,
+    addToCart,
     can,
   } = useWorkspace();
   const listing = produceListings.find((l) => l.id === listingId);
@@ -265,7 +265,7 @@ function ListingDetail() {
 
             {canBuy && (
               <div className="mt-5 border-t border-border pt-4">
-                <h3 className="text-sm font-semibold text-foreground">Buy this listing</h3>
+                <h3 className="text-sm font-semibold text-foreground">Add to cart</h3>
                 <div className="mt-3 flex flex-wrap items-end gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="buyQty">Quantity ({listing.unit})</Label>
@@ -299,19 +299,16 @@ function ListingDetail() {
                     onClick={() => {
                       const qty = Number(buyQuantity);
                       if (qty <= 0) return;
-                      const ok = buyListing(
+                      addToCart(
+                        "produce",
                         listing.id,
                         qty,
                         listing.negotiable ? Number(buyPrice) : undefined,
                       );
-                      if (ok) {
-                        setBuyQuantity("");
-                        setBuyPrice("");
-                        void navigate({ to: "/transactions" });
-                      }
+                      setBuyQuantity("");
                     }}
                   >
-                    <ShoppingCart className="size-4" /> Buy now
+                    <ShoppingCart className="size-4" /> Add to cart
                   </Button>
                 </div>
               </div>

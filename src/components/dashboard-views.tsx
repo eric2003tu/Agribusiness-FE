@@ -742,6 +742,8 @@ const TRANSACTION_STATUS_ORDER: TransactionStatus[] = [
   "confirmed_by_buyer",
   "completed",
   "disputed",
+  "refund_requested",
+  "refunded",
 ];
 const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
   pending: "var(--muted-foreground)",
@@ -749,6 +751,8 @@ const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
   confirmed_by_buyer: "var(--chart-2)",
   completed: "var(--success)",
   disputed: "var(--destructive)",
+  refund_requested: "var(--warning)",
+  refunded: "var(--chart-4)",
 };
 
 export function AdminDashboard() {
