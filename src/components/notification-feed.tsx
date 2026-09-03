@@ -3,7 +3,7 @@ import { timeAgo } from "@/lib/format";
 import { useNow } from "@/hooks/use-now";
 import type { NotificationKind } from "@/lib/mock-data";
 
-const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; color: string }> = {
+export const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; color: string }> = {
   new_match: { icon: Sparkles, color: "text-info" },
   aggregation_invite: { icon: Handshake, color: "text-primary" },
   spoilage_alert: { icon: AlertTriangle, color: "text-warning" },

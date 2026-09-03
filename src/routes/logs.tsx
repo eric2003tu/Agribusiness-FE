@@ -1,16 +1,11 @@
-import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { AlertTriangle, Handshake, ScrollText, ShoppingCart } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { NotificationFeed } from "@/components/notification-feed";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { StatCard } from "@/components/stat-card";
+import { DataTable, type Column, type FilterConfig } from "@/components/data-table";
+import { KIND_CONFIG } from "@/components/notification-feed";
 import { useWorkspace } from "@/lib/workspace-store";
-import type { NotificationKind } from "@/lib/mock-data";
+import type { NotificationKind, NotificationLog } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/logs")({
   head: () => ({
@@ -25,26 +20,86 @@ export const Route = createFileRoute("/logs")({
   component: Logs,
 });
 
-const KIND_OPTIONS: Array<{ value: NotificationKind | "all"; label: string }> = [
-  { value: "all", label: "All kinds" },
-  { value: "new_match", label: "New match" },
-  { value: "aggregation_invite", label: "Aggregation invite" },
-  { value: "spoilage_alert", label: "Spoilage alert" },
-  { value: "group_purchase", label: "Group purchase" },
-  { value: "transaction", label: "Transaction" },
-  { value: "system", label: "System" },
-];
+function formatSentAt(timestamp: string): string {
+  const d = new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return timestamp;
+  return d.toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const KIND_LABELS: Record<NotificationKind, string> = {
+  new_match: "New match",
+  aggregation_invite: "Aggregation invite",
+  spoilage_alert: "Spoilage alert",
+  group_purchase: "Group purchase",
+  transaction: "Transaction",
+  system: "System",
+};
 
 function Logs() {
-  const { users, notifications } = useWorkspace();
-  const [userFilter, setUserFilter] = useState("all");
-  const [kindFilter, setKindFilter] = useState<NotificationKind | "all">("all");
+  const { users, notifications, userById } = useWorkspace();
 
-  const filtered = notifications.filter(
-    (n) =>
-      (userFilter === "all" || n.userId === userFilter) &&
-      (kindFilter === "all" || n.kind === kindFilter),
-  );
+  const columns: Column<NotificationLog>[] = [
+    {
+      key: "kind",
+      header: "Kind",
+      render: (n) => {
+        const config = KIND_CONFIG[n.kind];
+        const Icon = config.icon;
+        return (
+          <span className={`flex items-center gap-1.5 text-sm ${config.color}`}>
+            <Icon className="size-4" />
+            {KIND_LABELS[n.kind]}
+          </span>
+        );
+      },
+      exportValue: (n) => KIND_LABELS[n.kind],
+    },
+    {
+      key: "recipient",
+      header: "Recipient",
+      render: (n) => userById(n.userId)?.name ?? "—",
+      exportValue: (n) => userById(n.userId)?.name ?? "",
+    },
+    {
+      key: "title",
+      header: "Title",
+      render: (n) => <span className="font-medium text-foreground">{n.title}</span>,
+      exportValue: (n) => n.title,
+    },
+    {
+      key: "detail",
+      header: "Detail",
+      render: (n) => <span className="line-clamp-2 max-w-sm text-muted-foreground">{n.detail}</span>,
+      exportValue: (n) => n.detail,
+    },
+    {
+      key: "timestamp",
+      header: "Sent",
+      render: (n) => <span className="whitespace-nowrap">{formatSentAt(n.timestamp)}</span>,
+      exportValue: (n) => n.timestamp,
+    },
+  ];
+
+  const filters: FilterConfig<NotificationLog>[] = [
+    {
+      key: "kind",
+      label: "Kind",
+      options: Object.entries(KIND_LABELS).map(([value, label]) => ({ value, label })),
+      match: (n, v) => n.kind === v,
+    },
+    {
+      key: "recipient",
+      label: "Recipient",
+      options: users.map((u) => ({ value: u.id, label: u.name })),
+      match: (n, v) => n.userId === v,
+    },
+  ];
 
   return (
     <AppShell
@@ -52,36 +107,40 @@ function Logs() {
       title="Audit log"
       description="Every notification sent across the platform, in order."
     >
-      <div className="surface-card space-y-4 p-6">
-        <div className="flex flex-wrap gap-3">
-          <Select value={userFilter} onValueChange={setUserFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All users</SelectItem>
-              {users.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as NotificationKind | "all")}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {KIND_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <NotificationFeed items={filtered} limit={200} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard icon={ScrollText} title="Total notifications" value={notifications.length} tone="brand" />
+        <StatCard
+          icon={ShoppingCart}
+          title="Transaction alerts"
+          value={notifications.filter((n) => n.kind === "transaction").length}
+          tone="success"
+        />
+        <StatCard
+          icon={Handshake}
+          title="Aggregation invites"
+          value={notifications.filter((n) => n.kind === "aggregation_invite").length}
+          tone="soft"
+        />
+        <StatCard
+          icon={AlertTriangle}
+          title="Spoilage alerts"
+          value={notifications.filter((n) => n.kind === "spoilage_alert").length}
+          tone={notifications.some((n) => n.kind === "spoilage_alert") ? "warning" : "success"}
+        />
       </div>
+
+      <DataTable
+        rows={notifications}
+        columns={columns}
+        getRowId={(n) => n.id}
+        searchFields={(n) => `${n.title} ${n.detail} ${userById(n.userId)?.name ?? ""}`}
+        filters={filters}
+        exportFileName="audit-log"
+        paginate
+        pageSizeOptions={[10, 25, 50, 100]}
+        searchPlaceholder="Search by title, detail or recipient…"
+        emptyMessage="No notifications match your filters."
+      />
     </AppShell>
   );
 }

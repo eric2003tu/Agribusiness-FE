@@ -32,6 +32,7 @@ import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as TransportPoolRouteImport } from './routes/transport-pool'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as AggregationGroupIdRouteImport } from './routes/aggregation.$groupId'
+import { Route as CooperativesCooperativeIdRouteImport } from './routes/cooperatives.$cooperativeId'
 import { Route as GroupPurchasesGroupPurchaseIdRouteImport } from './routes/group-purchases.$groupPurchaseId'
 import { Route as InputsInputIdRouteImport } from './routes/inputs.$inputId'
 import { Route as InputsNewRouteImport } from './routes/inputs.new'
@@ -157,6 +158,12 @@ const AggregationGroupIdRoute = AggregationGroupIdRouteImport.update({
   path: '/$groupId',
   getParentRoute: () => AggregationRoute,
 } as any)
+const CooperativesCooperativeIdRoute =
+  CooperativesCooperativeIdRouteImport.update({
+    id: '/$cooperativeId',
+    path: '/$cooperativeId',
+    getParentRoute: () => CooperativesRoute,
+  } as any)
 const GroupPurchasesGroupPurchaseIdRoute =
   GroupPurchasesGroupPurchaseIdRouteImport.update({
     id: '/$groupPurchaseId',
@@ -210,7 +217,7 @@ export interface FileRoutesByFullPath {
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
-  '/cooperatives': typeof CooperativesRoute
+  '/cooperatives': typeof CooperativesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
   '/inputs': typeof InputsRouteWithChildren
@@ -229,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
+  '/cooperatives/$cooperativeId': typeof CooperativesCooperativeIdRoute
   '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
   '/inputs/$inputId': typeof InputsInputIdRoute
   '/inputs/new': typeof InputsNewRoute
@@ -244,7 +252,7 @@ export interface FileRoutesByTo {
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
-  '/cooperatives': typeof CooperativesRoute
+  '/cooperatives': typeof CooperativesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
   '/inputs': typeof InputsRouteWithChildren
@@ -263,6 +271,7 @@ export interface FileRoutesByTo {
   '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
+  '/cooperatives/$cooperativeId': typeof CooperativesCooperativeIdRoute
   '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
   '/inputs/$inputId': typeof InputsInputIdRoute
   '/inputs/new': typeof InputsNewRoute
@@ -279,7 +288,7 @@ export interface FileRoutesById {
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
-  '/cooperatives': typeof CooperativesRoute
+  '/cooperatives': typeof CooperativesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
   '/inputs': typeof InputsRouteWithChildren
@@ -298,6 +307,7 @@ export interface FileRoutesById {
   '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
+  '/cooperatives/$cooperativeId': typeof CooperativesCooperativeIdRoute
   '/group-purchases/$groupPurchaseId': typeof GroupPurchasesGroupPurchaseIdRoute
   '/inputs/$inputId': typeof InputsInputIdRoute
   '/inputs/new': typeof InputsNewRoute
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
+    | '/cooperatives/$cooperativeId'
     | '/group-purchases/$groupPurchaseId'
     | '/inputs/$inputId'
     | '/inputs/new'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
+    | '/cooperatives/$cooperativeId'
     | '/group-purchases/$groupPurchaseId'
     | '/inputs/$inputId'
     | '/inputs/new'
@@ -402,6 +414,7 @@ export interface FileRouteTypes {
     | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
+    | '/cooperatives/$cooperativeId'
     | '/group-purchases/$groupPurchaseId'
     | '/inputs/$inputId'
     | '/inputs/new'
@@ -418,7 +431,7 @@ export interface RootRouteChildren {
   AggregationRoute: typeof AggregationRouteWithChildren
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
-  CooperativesRoute: typeof CooperativesRoute
+  CooperativesRoute: typeof CooperativesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   GroupPurchasesRoute: typeof GroupPurchasesRouteWithChildren
   InputsRoute: typeof InputsRouteWithChildren
@@ -601,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AggregationGroupIdRouteImport
       parentRoute: typeof AggregationRoute
     }
+    '/cooperatives/$cooperativeId': {
+      id: '/cooperatives/$cooperativeId'
+      path: '/$cooperativeId'
+      fullPath: '/cooperatives/$cooperativeId'
+      preLoaderRoute: typeof CooperativesCooperativeIdRouteImport
+      parentRoute: typeof CooperativesRoute
+    }
     '/group-purchases/$groupPurchaseId': {
       id: '/group-purchases/$groupPurchaseId'
       path: '/$groupPurchaseId'
@@ -677,6 +697,18 @@ const AggregationRouteChildren: AggregationRouteChildren = {
 
 const AggregationRouteWithChildren = AggregationRoute._addFileChildren(
   AggregationRouteChildren,
+)
+
+interface CooperativesRouteChildren {
+  CooperativesCooperativeIdRoute: typeof CooperativesCooperativeIdRoute
+}
+
+const CooperativesRouteChildren: CooperativesRouteChildren = {
+  CooperativesCooperativeIdRoute: CooperativesCooperativeIdRoute,
+}
+
+const CooperativesRouteWithChildren = CooperativesRoute._addFileChildren(
+  CooperativesRouteChildren,
 )
 
 interface GroupPurchasesRouteChildren {
@@ -759,7 +791,7 @@ const rootRouteChildren: RootRouteChildren = {
   AggregationRoute: AggregationRouteWithChildren,
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
-  CooperativesRoute: CooperativesRoute,
+  CooperativesRoute: CooperativesRouteWithChildren,
   DashboardRoute: DashboardRoute,
   GroupPurchasesRoute: GroupPurchasesRouteWithChildren,
   InputsRoute: InputsRouteWithChildren,

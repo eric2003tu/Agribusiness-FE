@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Clock3, RotateCcw, ShoppingCart, Wallet } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, RotateCcw, ShoppingCart, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
@@ -33,7 +33,8 @@ const NEEDS_ACTION_STATUSES = new Set<Transaction["status"]>([
 ]);
 
 function OrdersPage() {
-  const { myTransactions, currentUser, userById, confirmTransaction } = useWorkspace();
+  const { transactions, myTransactions, currentUser, userById, confirmTransaction, can } = useWorkspace();
+  const isModerator = can("moderate");
 
   const purchases = myTransactions.filter((t) => t.buyerId === currentUser.id);
   const sales = myTransactions.filter((t) => t.sellerId === currentUser.id);
@@ -114,6 +115,74 @@ function OrdersPage() {
     ];
   }
 
+  const allColumns: Column<Transaction>[] = [
+    {
+      key: "product",
+      header: "Product",
+      render: (t) => (
+        <div className="flex items-center gap-3">
+          <ProductIllustration productId={t.productId} className="size-10" rounded="rounded-lg" />
+          <span className="font-medium text-foreground">{productById(t.productId)?.name ?? "—"}</span>
+        </div>
+      ),
+      exportValue: (t) => productById(t.productId)?.name ?? "",
+    },
+    {
+      key: "quantity",
+      header: "Quantity",
+      render: (t) => formatQuantity(t.quantity, t.unit),
+      exportValue: (t) => t.quantity,
+    },
+    {
+      key: "value",
+      header: "Total value",
+      render: (t) => formatRwf(t.quantity * t.unitPrice),
+      exportValue: (t) => t.quantity * t.unitPrice,
+    },
+    {
+      key: "buyer",
+      header: "Buyer",
+      render: (t) => userById(t.buyerId)?.name ?? "—",
+      exportValue: (t) => userById(t.buyerId)?.name ?? "",
+    },
+    {
+      key: "seller",
+      header: "Seller",
+      render: (t) => userById(t.sellerId)?.name ?? "—",
+      exportValue: (t) => userById(t.sellerId)?.name ?? "",
+    },
+    {
+      key: "payment",
+      header: "Payment",
+      render: (t) => (t.paymentMethod ? PAYMENT_METHOD_LABELS[t.paymentMethod] : "—"),
+      exportValue: (t) => (t.paymentMethod ? PAYMENT_METHOD_LABELS[t.paymentMethod] : ""),
+    },
+    {
+      key: "date",
+      header: "Date",
+      render: (t) => t.createdAt,
+      exportValue: (t) => t.createdAt,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (t) => <TransactionStatusBadge status={t.status} />,
+      exportValue: (t) => t.status,
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (t) => (
+        <Button asChild size="sm" variant="outline">
+          <Link to="/transactions/$transactionId" params={{ transactionId: t.id }}>
+            View
+          </Link>
+        </Button>
+      ),
+      exportValue: () => "",
+    },
+  ];
+
   const filters: FilterConfig<Transaction>[] = [
     {
       key: "status",
@@ -124,12 +193,66 @@ function OrdersPage() {
   ];
 
   return (
-    <AppShell title="Orders" description="Track what you've bought and what you've sold.">
-      <Tabs defaultValue="purchases">
+    <AppShell
+      title="Orders"
+      description={
+        isModerator
+          ? "Every order on the marketplace, plus what you've personally bought or sold."
+          : "Track what you've bought and what you've sold."
+      }
+    >
+      <Tabs defaultValue={isModerator ? "all" : "purchases"}>
         <TabsList>
+          {isModerator && <TabsTrigger value="all">All orders ({transactions.length})</TabsTrigger>}
           <TabsTrigger value="purchases">Purchases ({purchases.length})</TabsTrigger>
           <TabsTrigger value="sales">Sales ({sales.length})</TabsTrigger>
         </TabsList>
+
+        {isModerator && (
+          <TabsContent value="all" className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <StatCard icon={ShoppingCart} title="Total orders" value={transactions.length} tone="brand" />
+              <StatCard
+                icon={CheckCircle2}
+                title="Completed"
+                value={transactions.filter((t) => t.status === "completed").length}
+                tone="success"
+              />
+              <StatCard
+                icon={AlertTriangle}
+                title="Disputed"
+                value={transactions.filter((t) => t.status === "disputed").length}
+                tone={transactions.some((t) => t.status === "disputed") ? "danger" : "success"}
+              />
+              <StatCard
+                icon={RotateCcw}
+                title="Refund requests"
+                value={transactions.filter((t) => t.status === "refund_requested").length}
+                tone={transactions.some((t) => t.status === "refund_requested") ? "warning" : "success"}
+              />
+              <StatCard
+                icon={Wallet}
+                title="Total value"
+                value={formatRwf(transactions.reduce((s, t) => s + t.quantity * t.unitPrice, 0))}
+                tone="soft"
+              />
+            </div>
+
+            <DataTable
+              rows={transactions}
+              columns={allColumns}
+              getRowId={(t) => t.id}
+              searchFields={(t) =>
+                `${productById(t.productId)?.name} ${userById(t.buyerId)?.name} ${userById(t.sellerId)?.name}`
+              }
+              filters={filters}
+              exportFileName="all-orders"
+              paginate
+              searchPlaceholder="Search by product, buyer or seller…"
+              emptyMessage="No orders yet."
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="purchases" className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

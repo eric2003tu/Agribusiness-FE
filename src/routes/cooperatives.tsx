@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Building2 } from "lucide-react";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
+import { Building2, Handshake, MapPinned, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserAvatar } from "@/components/user-avatar";
+import { DataTable, type Column, type FilterConfig } from "@/components/data-table";
 import { useWorkspace } from "@/lib/workspace-store";
-import { ORGANIZATION_TYPE_LABELS, locationById } from "@/lib/mock-data";
+import { ORGANIZATION_TYPE_LABELS, locationById, type Cooperative } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/cooperatives")({
   head: () => ({
@@ -25,10 +26,93 @@ export const Route = createFileRoute("/cooperatives")({
 });
 
 function CooperativesPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { cooperatives, users, endorsements, userById, addEndorsement } = useWorkspace();
   const unverifiedFarmers = users.filter((u) => u.roles.includes("farmer") && !u.isVerified);
   const [endorsedId, setEndorsedId] = useState(unverifiedFarmers[0]?.id ?? "");
   const [note, setNote] = useState("");
+
+  if (pathname !== "/cooperatives") {
+    return <Outlet />;
+  }
+
+  const membersOf = (coopId: string) => users.filter((u) => u.cooperativeId === coopId);
+  const totalMembers = users.filter((u) => u.cooperativeId).length;
+  const districtsCovered = new Set(cooperatives.map((c) => c.districtId)).size;
+
+  const columns: Column<Cooperative>[] = [
+    {
+      key: "name",
+      header: "Cooperative",
+      render: (c) => (
+        <div>
+          <p className="font-medium text-foreground">{c.name}</p>
+          <p className="text-xs text-muted-foreground">{c.registrationNumber}</p>
+        </div>
+      ),
+      exportValue: (c) => c.name,
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (c) => <Badge variant="secondary">{ORGANIZATION_TYPE_LABELS[c.organizationType]}</Badge>,
+      exportValue: (c) => ORGANIZATION_TYPE_LABELS[c.organizationType],
+    },
+    {
+      key: "district",
+      header: "District",
+      render: (c) => locationById(c.districtId)?.name ?? "—",
+      exportValue: (c) => locationById(c.districtId)?.name ?? "",
+    },
+    {
+      key: "members",
+      header: "Members",
+      render: (c) => {
+        const members = membersOf(c.id);
+        return (
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-2">
+              {members.slice(0, 4).map((m) => (
+                <UserAvatar key={m.id} user={m} className="size-7 border-2 border-card text-[10px]" />
+              ))}
+            </div>
+            <span className="text-sm text-muted-foreground">{members.length}</span>
+          </div>
+        );
+      },
+      exportValue: (c) => membersOf(c.id).length,
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (c) => (
+        <Button asChild size="sm" variant="outline">
+          <Link to="/cooperatives/$cooperativeId" params={{ cooperativeId: c.id }}>
+            View
+          </Link>
+        </Button>
+      ),
+      exportValue: () => "",
+    },
+  ];
+
+  const filters: FilterConfig<Cooperative>[] = [
+    {
+      key: "type",
+      label: "Type",
+      options: Object.entries(ORGANIZATION_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+      match: (c, v) => c.organizationType === v,
+    },
+    {
+      key: "district",
+      label: "District",
+      options: [...new Set(cooperatives.map((c) => c.districtId))].map((id) => ({
+        value: id,
+        label: locationById(id)?.name ?? id,
+      })),
+      match: (c, v) => c.districtId === v,
+    },
+  ];
 
   return (
     <AppShell
@@ -38,32 +122,22 @@ function CooperativesPage() {
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Building2} title="Cooperatives" value={cooperatives.length} tone="brand" />
+        <StatCard icon={Users} title="Total members" value={totalMembers} tone="success" />
+        <StatCard icon={MapPinned} title="Districts covered" value={districtsCovered} tone="soft" />
+        <StatCard icon={Handshake} title="Endorsements" value={endorsements.length} tone="warning" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {cooperatives.map((coop) => {
-          const members = users.filter((u) => u.cooperativeId === coop.id);
-          return (
-            <section key={coop.id} className="surface-card p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">{coop.name}</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {locationById(coop.districtId)?.name} · {coop.registrationNumber}
-                  </p>
-                </div>
-                <Badge variant="secondary">{ORGANIZATION_TYPE_LABELS[coop.organizationType]}</Badge>
-              </div>
-              <div className="mt-4 flex -space-x-2">
-                {members.slice(0, 6).map((m) => (
-                  <UserAvatar key={m.id} user={m} className="border-2 border-card" />
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">{members.length} member(s)</p>
-            </section>
-          );
-        })}
-      </div>
+      <DataTable
+        rows={cooperatives}
+        columns={columns}
+        getRowId={(c) => c.id}
+        searchFields={(c) => `${c.name} ${c.registrationNumber} ${locationById(c.districtId)?.name ?? ""}`}
+        filters={filters}
+        exportFileName="cooperatives"
+        paginate
+        searchPlaceholder="Search by name, registration number or district…"
+        emptyMessage="No cooperatives registered yet."
+      />
 
       <section className="surface-card p-5">
         <h2 className="text-sm font-semibold text-foreground">Community endorsements</h2>
