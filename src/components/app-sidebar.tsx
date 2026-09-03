@@ -56,11 +56,11 @@ const NAV: NavItem[] = [
   { title: "Group purchases", url: "/group-purchases", icon: Boxes, roles: ["farmer", "supplier", "admin"], group: "Marketplace" },
   { title: "Orders", url: "/orders", icon: PackageCheck, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
   { title: "Transactions", url: "/transactions", icon: ShoppingCart, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
+  { title: "Refunds", url: "/refunds", icon: RotateCcw, roles: ["farmer", "buyer", "supplier", "admin"], group: "Marketplace" },
   { title: "Market prices", url: "/market-prices", icon: LineChart, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
   { title: "Transport pooling", url: "/transport-pool", icon: Truck, roles: ["transporter", "admin"], group: "Marketplace" },
 
   { title: "Users", url: "/users", icon: Users, roles: ["admin"], group: "Management" },
-  { title: "Refunds", url: "/refunds", icon: RotateCcw, roles: ["admin"], group: "Management" },
   { title: "Cooperatives", url: "/cooperatives", icon: Building2, roles: ["admin"], group: "Management" },
   { title: "Audit log", url: "/logs", icon: ScrollText, roles: ["admin"], group: "Management" },
 ];
