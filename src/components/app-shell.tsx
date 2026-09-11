@@ -1,18 +1,15 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronDown, LogOut, ShoppingCart } from "lucide-react";
+import { ChevronDown, LogOut, Settings as SettingsIcon, ShoppingCart, UserCircle } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -33,7 +30,7 @@ export function AppShell({
   allowedRoles?: Role[];
   children: ReactNode;
 }) {
-  const { users, currentUser, session, ready, setCurrentUserId, signOut, cartCount } = useWorkspace();
+  const { currentUser, session, ready, signOut, cartCount } = useWorkspace();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -87,19 +84,18 @@ export function AppShell({
                   <p className="text-xs text-muted-foreground">{currentUser.phone}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Switch demo user
-                </DropdownMenuLabel>
-                <DropdownMenuRadioGroup value={currentUser.id} onValueChange={setCurrentUserId}>
-                  {users.map((u) => (
-                    <DropdownMenuRadioItem key={u.id} value={u.id}>
-                      <span className="truncate">{u.name}</span>
-                      <Badge variant="secondary" className="ml-auto">
-                        {ROLE_LABELS[primaryRole(u)]}
-                      </Badge>
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
+                <DropdownMenuItem asChild>
+                  <Link to="/users/$userId" params={{ userId: currentUser.id }}>
+                    <UserCircle className="size-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/settings">
+                    <SettingsIcon className="size-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => {

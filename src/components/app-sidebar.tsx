@@ -2,18 +2,24 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Boxes,
   Building2,
+  ClipboardList,
+  Database,
   Handshake,
   LayoutDashboard,
   LineChart,
+  MessageCircle,
   MessageSquare,
   Package,
   PackageCheck,
+  Receipt,
   RotateCcw,
   ScrollText,
   Settings,
+  ShoppingBag,
   ShoppingBasket,
   ShoppingCart,
   Sprout,
+  Tag,
   Truck,
   Users,
   Warehouse,
@@ -49,6 +55,7 @@ const NAV: NavItem[] = [
   { title: "Settings", url: "/settings", icon: Settings, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
 
   { title: "My listings", url: "/my-listings", icon: Warehouse, roles: ["farmer"], group: "Marketplace" },
+  { title: "Products", url: "/products", icon: Tag, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
   { title: "Produce listings", url: "/listings", icon: Sprout, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
   { title: "Buyer requests", url: "/requests", icon: ShoppingBasket, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
   { title: "Aggregation groups", url: "/aggregation", icon: Handshake, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
@@ -63,6 +70,15 @@ const NAV: NavItem[] = [
   { title: "Users", url: "/users", icon: Users, roles: ["admin"], group: "Management" },
   { title: "Cooperatives", url: "/cooperatives", icon: Building2, roles: ["admin"], group: "Management" },
   { title: "Audit log", url: "/logs", icon: ScrollText, roles: ["admin"], group: "Management" },
+  // These five talk directly to the real backend, which enforces its own real
+  // authorization (public reads, staff-only writes) — gating them behind the
+  // mock role system too would be a redundant, wrong-signal wall, since a real
+  // account has no `roles` field at all and always defaults to "farmer".
+  { title: "Reference data", url: "/reference-data", icon: Database, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
+  { title: "Catalog (live API)", url: "/catalog-data", icon: ClipboardList, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
+  { title: "Commerce (live API)", url: "/commerce-data", icon: ShoppingBag, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
+  { title: "Transactions (live API)", url: "/transactions-data", icon: Receipt, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
+  { title: "Social (live API)", url: "/social-data", icon: MessageCircle, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
 ];
 
 export function AppSidebar() {

@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AggregationRouteImport } from './routes/aggregation'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as CatalogDataRouteImport } from './routes/catalog-data'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as CommerceDataRouteImport } from './routes/commerce-data'
 import { Route as CooperativesRouteImport } from './routes/cooperatives'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GroupPurchasesRouteImport } from './routes/group-purchases'
@@ -24,11 +26,15 @@ import { Route as MarketPricesRouteImport } from './routes/market-prices'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MyListingsRouteImport } from './routes/my-listings'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as ProductsRouteImport } from './routes/products'
+import { Route as ReferenceDataRouteImport } from './routes/reference-data'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RequestsRouteImport } from './routes/requests'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SocialDataRouteImport } from './routes/social-data'
 import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as TransactionsDataRouteImport } from './routes/transactions-data'
 import { Route as TransportPoolRouteImport } from './routes/transport-pool'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as AggregationGroupIdRouteImport } from './routes/aggregation.$groupId'
@@ -58,9 +64,19 @@ const CartRoute = CartRouteImport.update({
   path: '/cart',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CatalogDataRoute = CatalogDataRouteImport.update({
+  id: '/catalog-data',
+  path: '/catalog-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommerceDataRoute = CommerceDataRouteImport.update({
+  id: '/commerce-data',
+  path: '/commerce-data',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CooperativesRoute = CooperativesRouteImport.update({
@@ -118,6 +134,16 @@ const OrdersRoute = OrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductsRoute = ProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferenceDataRoute = ReferenceDataRouteImport.update({
+  id: '/reference-data',
+  path: '/reference-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RefundsRoute = RefundsRouteImport.update({
   id: '/refunds',
   path: '/refunds',
@@ -138,9 +164,19 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SocialDataRoute = SocialDataRouteImport.update({
+  id: '/social-data',
+  path: '/social-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TransactionsDataRoute = TransactionsDataRouteImport.update({
+  id: '/transactions-data',
+  path: '/transactions-data',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TransportPoolRoute = TransportPoolRouteImport.update({
@@ -216,7 +252,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
+  '/catalog-data': typeof CatalogDataRoute
   '/checkout': typeof CheckoutRoute
+  '/commerce-data': typeof CommerceDataRoute
   '/cooperatives': typeof CooperativesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
@@ -228,11 +266,15 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
   '/orders': typeof OrdersRoute
+  '/products': typeof ProductsRoute
+  '/reference-data': typeof ReferenceDataRoute
   '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
+  '/social-data': typeof SocialDataRoute
   '/transactions': typeof TransactionsRouteWithChildren
+  '/transactions-data': typeof TransactionsDataRoute
   '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
@@ -251,7 +293,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
+  '/catalog-data': typeof CatalogDataRoute
   '/checkout': typeof CheckoutRoute
+  '/commerce-data': typeof CommerceDataRoute
   '/cooperatives': typeof CooperativesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
@@ -263,11 +307,15 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
   '/orders': typeof OrdersRoute
+  '/products': typeof ProductsRoute
+  '/reference-data': typeof ReferenceDataRoute
   '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
+  '/social-data': typeof SocialDataRoute
   '/transactions': typeof TransactionsRouteWithChildren
+  '/transactions-data': typeof TransactionsDataRoute
   '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
@@ -287,7 +335,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
+  '/catalog-data': typeof CatalogDataRoute
   '/checkout': typeof CheckoutRoute
+  '/commerce-data': typeof CommerceDataRoute
   '/cooperatives': typeof CooperativesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/group-purchases': typeof GroupPurchasesRouteWithChildren
@@ -299,11 +349,15 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
   '/orders': typeof OrdersRoute
+  '/products': typeof ProductsRoute
+  '/reference-data': typeof ReferenceDataRoute
   '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
   '/requests': typeof RequestsRouteWithChildren
   '/settings': typeof SettingsRoute
+  '/social-data': typeof SocialDataRoute
   '/transactions': typeof TransactionsRouteWithChildren
+  '/transactions-data': typeof TransactionsDataRoute
   '/transport-pool': typeof TransportPoolRoute
   '/users': typeof UsersRouteWithChildren
   '/aggregation/$groupId': typeof AggregationGroupIdRoute
@@ -324,7 +378,9 @@ export interface FileRouteTypes {
     | '/'
     | '/aggregation'
     | '/cart'
+    | '/catalog-data'
     | '/checkout'
+    | '/commerce-data'
     | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
@@ -336,11 +392,15 @@ export interface FileRouteTypes {
     | '/messages'
     | '/my-listings'
     | '/orders'
+    | '/products'
+    | '/reference-data'
     | '/refunds'
     | '/register'
     | '/requests'
     | '/settings'
+    | '/social-data'
     | '/transactions'
+    | '/transactions-data'
     | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
@@ -359,7 +419,9 @@ export interface FileRouteTypes {
     | '/'
     | '/aggregation'
     | '/cart'
+    | '/catalog-data'
     | '/checkout'
+    | '/commerce-data'
     | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
@@ -371,11 +433,15 @@ export interface FileRouteTypes {
     | '/messages'
     | '/my-listings'
     | '/orders'
+    | '/products'
+    | '/reference-data'
     | '/refunds'
     | '/register'
     | '/requests'
     | '/settings'
+    | '/social-data'
     | '/transactions'
+    | '/transactions-data'
     | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
@@ -394,7 +460,9 @@ export interface FileRouteTypes {
     | '/'
     | '/aggregation'
     | '/cart'
+    | '/catalog-data'
     | '/checkout'
+    | '/commerce-data'
     | '/cooperatives'
     | '/dashboard'
     | '/group-purchases'
@@ -406,11 +474,15 @@ export interface FileRouteTypes {
     | '/messages'
     | '/my-listings'
     | '/orders'
+    | '/products'
+    | '/reference-data'
     | '/refunds'
     | '/register'
     | '/requests'
     | '/settings'
+    | '/social-data'
     | '/transactions'
+    | '/transactions-data'
     | '/transport-pool'
     | '/users'
     | '/aggregation/$groupId'
@@ -430,7 +502,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AggregationRoute: typeof AggregationRouteWithChildren
   CartRoute: typeof CartRoute
+  CatalogDataRoute: typeof CatalogDataRoute
   CheckoutRoute: typeof CheckoutRoute
+  CommerceDataRoute: typeof CommerceDataRoute
   CooperativesRoute: typeof CooperativesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   GroupPurchasesRoute: typeof GroupPurchasesRouteWithChildren
@@ -442,11 +516,15 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRoute
   MyListingsRoute: typeof MyListingsRoute
   OrdersRoute: typeof OrdersRoute
+  ProductsRoute: typeof ProductsRoute
+  ReferenceDataRoute: typeof ReferenceDataRoute
   RefundsRoute: typeof RefundsRoute
   RegisterRoute: typeof RegisterRoute
   RequestsRoute: typeof RequestsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
+  SocialDataRoute: typeof SocialDataRoute
   TransactionsRoute: typeof TransactionsRouteWithChildren
+  TransactionsDataRoute: typeof TransactionsDataRoute
   TransportPoolRoute: typeof TransportPoolRoute
   UsersRoute: typeof UsersRouteWithChildren
 }
@@ -474,11 +552,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/catalog-data': {
+      id: '/catalog-data'
+      path: '/catalog-data'
+      fullPath: '/catalog-data'
+      preLoaderRoute: typeof CatalogDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout': {
       id: '/checkout'
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/commerce-data': {
+      id: '/commerce-data'
+      path: '/commerce-data'
+      fullPath: '/commerce-data'
+      preLoaderRoute: typeof CommerceDataRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cooperatives': {
@@ -558,6 +650,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/products': {
+      id: '/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof ProductsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reference-data': {
+      id: '/reference-data'
+      path: '/reference-data'
+      fullPath: '/reference-data'
+      preLoaderRoute: typeof ReferenceDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/refunds': {
       id: '/refunds'
       path: '/refunds'
@@ -586,11 +692,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/social-data': {
+      id: '/social-data'
+      path: '/social-data'
+      fullPath: '/social-data'
+      preLoaderRoute: typeof SocialDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/transactions': {
       id: '/transactions'
       path: '/transactions'
       fullPath: '/transactions'
       preLoaderRoute: typeof TransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transactions-data': {
+      id: '/transactions-data'
+      path: '/transactions-data'
+      fullPath: '/transactions-data'
+      preLoaderRoute: typeof TransactionsDataRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transport-pool': {
@@ -790,7 +910,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AggregationRoute: AggregationRouteWithChildren,
   CartRoute: CartRoute,
+  CatalogDataRoute: CatalogDataRoute,
   CheckoutRoute: CheckoutRoute,
+  CommerceDataRoute: CommerceDataRoute,
   CooperativesRoute: CooperativesRouteWithChildren,
   DashboardRoute: DashboardRoute,
   GroupPurchasesRoute: GroupPurchasesRouteWithChildren,
@@ -802,11 +924,15 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRoute,
   MyListingsRoute: MyListingsRoute,
   OrdersRoute: OrdersRoute,
+  ProductsRoute: ProductsRoute,
+  ReferenceDataRoute: ReferenceDataRoute,
   RefundsRoute: RefundsRoute,
   RegisterRoute: RegisterRoute,
   RequestsRoute: RequestsRouteWithChildren,
   SettingsRoute: SettingsRoute,
+  SocialDataRoute: SocialDataRoute,
   TransactionsRoute: TransactionsRouteWithChildren,
+  TransactionsDataRoute: TransactionsDataRoute,
   TransportPoolRoute: TransportPoolRoute,
   UsersRoute: UsersRouteWithChildren,
 }

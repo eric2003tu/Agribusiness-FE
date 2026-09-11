@@ -12,6 +12,18 @@ import { toast } from "sonner";
 import { authenticate, SESSION_STORAGE_KEY } from "./auth";
 import { formatQuantity } from "./format";
 import {
+  clearStoredApiUser,
+  getStoredApiUser,
+  loginApi,
+  logoutApi,
+  registerApi,
+  resendOtpApi,
+  verifyOtpApi,
+} from "./api/auth";
+import { ApiError, apiErrorMessage, apiFieldErrors, clearTokens, getTokens } from "./api/client";
+import { mapApiUserToAppUser } from "./api/mappers";
+import type { RegisterPayload as ApiRegisterPayload } from "./api/types";
+import {
   users as seedUsers,
   produceListings as seedProduceListings,
   buyerRequests as seedBuyerRequests,
@@ -85,6 +97,12 @@ export interface ResolvedCartLine extends CartLine {
   available: boolean;
 }
 
+export interface ApiAuthResult {
+  ok: boolean;
+  error?: string;
+  fieldErrors?: Record<string, string>;
+}
+
 type Ability = "moderate" | "manageOwnListings" | "manageOwnRequests" | "manageOwnInputs";
 
 const ROLE_ABILITIES: Record<Role, Ability[]> = {
@@ -108,6 +126,12 @@ interface WorkspaceContextValue {
     preferredLanguage: Language;
     locationId: string;
   }) => { ok: boolean; error?: string };
+  /** Real backend auth (JWT) — separate from the demo-account `signIn`/`registerUser`
+   * above, which stay mock-data-only. See `src/lib/api/*`. */
+  login: (identifier: string, password: string) => Promise<ApiAuthResult>;
+  register: (input: ApiRegisterPayload) => Promise<ApiAuthResult>;
+  verifyOtp: (identifier: string, code: string) => Promise<ApiAuthResult>;
+  resendOtp: (identifier: string) => Promise<ApiAuthResult>;
   signOut: () => void;
   setCurrentUserId: (id: string) => void;
   can: (action: Ability) => boolean;
@@ -250,6 +274,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [allTransportOffers, setAllTransportOffers] = useState<TransportOffer[]>(seedTransportOffers);
   const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
+  // Real backend session (JWT-backed), separate from the mock demo-account
+  // `currentUserId` above — takes precedence when present.
+  const [apiUser, setApiUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
   const alertedListingIds = useRef<Set<string>>(new Set());
 
@@ -260,10 +287,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     } catch {
       /* storage unavailable */
     }
+    const storedApiUser = getStoredApiUser();
+    if (storedApiUser && getTokens()) setApiUser(mapApiUserToAppUser(storedApiUser));
     setReady(true);
   }, []);
 
-  const session = allUsers.find((u) => u.id === currentUserId) ?? null;
+  const session = apiUser ?? allUsers.find((u) => u.id === currentUserId) ?? null;
   const currentUser = (session ?? allUsers[0]) as User;
 
   const persist = useCallback((id: string | null) => {
@@ -330,10 +359,79 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    const tokens = getTokens();
+    if (tokens) void logoutApi(tokens.refresh).catch(() => clearTokens());
+    else clearStoredApiUser();
+    setApiUser(null);
     setCurrentUserIdState(null);
     persist(null);
     toast.success("Signed out");
   }, [persist]);
+
+  const login: WorkspaceContextValue["login"] = useCallback(
+    async (identifier, password) => {
+      try {
+        const res = await loginApi({ identifier, password });
+        const mapped = mapApiUserToAppUser(res.user);
+        setApiUser(mapped);
+        setCurrentUserIdState(null);
+        logAudit(mapped.id, "Signed in", mapped.name, "success");
+        toast.success(`Welcome back, ${mapped.name.split(" ")[0]}`, { description: res.message });
+        return { ok: true };
+      } catch (err) {
+        const body = err instanceof ApiError ? err.body : null;
+        const message = apiErrorMessage(body) ?? "Could not reach the server.";
+        logAudit(null, "Sign-in attempt", identifier, "failed", message, identifier);
+        toast.error("Sign in failed", { description: message });
+        return { ok: false, error: message, fieldErrors: apiFieldErrors(body) };
+      }
+    },
+    [logAudit],
+  );
+
+  const register: WorkspaceContextValue["register"] = useCallback(
+    async (input) => {
+      try {
+        const res = await registerApi(input);
+        logAudit(null, "Registered account", res.user.full_name, "success");
+        toast.success(res.message);
+        return { ok: true };
+      } catch (err) {
+        const body = err instanceof ApiError ? err.body : null;
+        const message = apiErrorMessage(body) ?? "Could not reach the server.";
+        logAudit(null, "Registration attempt", input.phone, "failed", message, input.phone);
+        toast.error("Registration failed", { description: message });
+        return { ok: false, error: message, fieldErrors: apiFieldErrors(body) };
+      }
+    },
+    [logAudit],
+  );
+
+  const verifyOtp: WorkspaceContextValue["verifyOtp"] = useCallback(async (identifier, code) => {
+    try {
+      const res = await verifyOtpApi({ identifier, code });
+      toast.success(res.message);
+      return { ok: true };
+    } catch (err) {
+      const body = err instanceof ApiError ? err.body : null;
+      const message = apiErrorMessage(body) ?? "Could not reach the server.";
+      toast.error("Verification failed", { description: message });
+      return { ok: false, error: message, fieldErrors: apiFieldErrors(body) };
+    }
+  }, []);
+
+  const resendOtp: WorkspaceContextValue["resendOtp"] = useCallback(async (identifier) => {
+    try {
+      const res = await resendOtpApi(identifier);
+      toast.success(res.message);
+      return { ok: true };
+    } catch (err) {
+      const body = err instanceof ApiError ? err.body : null;
+      const message = apiErrorMessage(body) ?? "Could not reach the server.";
+      toast.error("Could not resend code", { description: message });
+      return { ok: false, error: message };
+    }
+  }, []);
 
   const setCurrentUserId = useCallback(
     (id: string) => {
@@ -1934,6 +2032,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     ready,
     signIn,
     registerUser,
+    login,
+    register,
+    verifyOtp,
+    resendOtp,
     signOut,
     setCurrentUserId,
     can,
