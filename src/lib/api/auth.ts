@@ -40,11 +40,19 @@ export function clearStoredApiUser() {
 }
 
 export function registerApi(payload: RegisterPayload) {
-  return apiRequest<RegisterResponse>("auth/register/", { method: "POST", body: payload, auth: false });
+  return apiRequest<RegisterResponse>("auth/register/", {
+    method: "POST",
+    body: payload,
+    auth: false,
+  });
 }
 
 export function verifyOtpApi(payload: VerifyOtpPayload) {
-  return apiRequest<MessageResponse>("auth/verify-otp/", { method: "POST", body: payload, auth: false });
+  return apiRequest<MessageResponse>("auth/verify-otp/", {
+    method: "POST",
+    body: payload,
+    auth: false,
+  });
 }
 
 export function resendOtpApi(identifier: string) {
@@ -56,7 +64,11 @@ export function resendOtpApi(identifier: string) {
 }
 
 export async function loginApi(payload: LoginPayload) {
-  const res = await apiRequest<LoginResponse>("auth/login/", { method: "POST", body: payload, auth: false });
+  const res = await apiRequest<LoginResponse>("auth/login/", {
+    method: "POST",
+    body: payload,
+    auth: false,
+  });
   setTokens({ access: res.access, refresh: res.refresh });
   setStoredApiUser(res.user);
   return res;
@@ -68,6 +80,15 @@ export function refreshTokenApi(refresh: string) {
     body: { refresh },
     auth: false,
   });
+}
+
+/** The caller's own up-to-date profile from the live API (`GET /auth/me/`).
+ * Re-fetching on boot both re-validates the stored tokens (the client
+ * transparently refreshes an expired access token and clears the session on
+ * a dead refresh token) and picks up role changes made server-side (e.g.
+ * `/auth/me/switch-role/`) instead of trusting stale cached storage. */
+export function fetchMeApi() {
+  return apiRequest<ApiUser>("auth/me/");
 }
 
 export async function logoutApi(refresh: string) {

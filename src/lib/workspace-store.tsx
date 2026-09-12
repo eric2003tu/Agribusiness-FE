@@ -13,14 +13,23 @@ import { authenticate, SESSION_STORAGE_KEY } from "./auth";
 import { formatQuantity } from "./format";
 import {
   clearStoredApiUser,
+  fetchMeApi,
   getStoredApiUser,
   loginApi,
   logoutApi,
   registerApi,
   resendOtpApi,
+  setStoredApiUser,
   verifyOtpApi,
 } from "./api/auth";
-import { ApiError, apiErrorMessage, apiFieldErrors, clearTokens, getTokens } from "./api/client";
+import {
+  ApiError,
+  apiErrorMessage,
+  apiFieldErrors,
+  clearTokens,
+  getTokens,
+  SESSION_EXPIRED_EVENT,
+} from "./api/client";
 import { mapApiUserToAppUser } from "./api/mappers";
 import type { RegisterPayload as ApiRegisterPayload } from "./api/types";
 import {
@@ -228,7 +237,11 @@ interface WorkspaceContextValue {
   sendMessage: (threadId: string, body: string) => void;
 
   marketPriceRecords: MarketPriceRecord[];
-  addManualPriceRecord: (input: { productId: string; districtId: string; avgPrice: number }) => void;
+  addManualPriceRecord: (input: {
+    productId: string;
+    districtId: string;
+    avgPrice: number;
+  }) => void;
 
   notifications: NotificationLog[];
   notificationsForUser: (userId: string) => NotificationLog[];
@@ -267,11 +280,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [allRatings, setAllRatings] = useState<Rating[]>(seedRatings);
   const [allThreads, setAllThreads] = useState<MessageThread[]>(seedMessageThreads);
   const [allMessages, setAllMessages] = useState<Message[]>(seedMessages);
-  const [allPriceRecords, setAllPriceRecords] = useState<MarketPriceRecord[]>(seedMarketPriceRecords);
+  const [allPriceRecords, setAllPriceRecords] =
+    useState<MarketPriceRecord[]>(seedMarketPriceRecords);
   const [allNotifications, setAllNotifications] = useState<NotificationLog[]>(seedNotificationLog);
   const [allAuditLog, setAllAuditLog] = useState<AuditLogEntry[]>(seedAuditLog);
   const [allEndorsements, setAllEndorsements] = useState<Endorsement[]>(seedEndorsements);
-  const [allTransportOffers, setAllTransportOffers] = useState<TransportOffer[]>(seedTransportOffers);
+  const [allTransportOffers, setAllTransportOffers] =
+    useState<TransportOffer[]>(seedTransportOffers);
   const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
   // Real backend session (JWT-backed), separate from the mock demo-account
@@ -288,8 +303,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       /* storage unavailable */
     }
     const storedApiUser = getStoredApiUser();
-    if (storedApiUser && getTokens()) setApiUser(mapApiUserToAppUser(storedApiUser));
-    setReady(true);
+    if (!storedApiUser || !getTokens()) setReady(true);
   }, []);
 
   const session = apiUser ?? allUsers.find((u) => u.id === currentUserId) ?? null;
@@ -303,6 +317,51 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       /* storage unavailable */
     }
   }, []);
+
+  // Re-validate a restored API session against the live API: /auth/me/
+  // transparently refreshes an expired access token and re-hydrates the
+  // profile so server-side role changes (e.g. switch-role) take effect.
+  // Only an unrecoverable 401 signs the user out — transient network
+  // failures keep the cached session rather than logging anyone out.
+  useEffect(() => {
+    const storedApiUser = getStoredApiUser();
+    if (!storedApiUser || !getTokens()) return;
+    // Ready is set synchronously so a valid stored session renders immediately
+    // even offline; the fetch below then refines/fixes the profile lazily.
+    setReady(true);
+    setApiUser(mapApiUserToAppUser(storedApiUser));
+    fetchMeApi()
+      .then((fresh) => {
+        setStoredApiUser(fresh);
+        setApiUser(mapApiUserToAppUser(fresh));
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 401) {
+          clearTokens();
+          clearStoredApiUser();
+          setApiUser(null);
+          setCurrentUserIdState(null);
+          persist(null);
+        }
+      });
+  }, [persist]);
+
+  // Keep the in-memory session in lockstep with token validity: whenever the
+  // API client gives up (401 + failed refresh), sign out so the user isn't
+  // left "logged in" on pages whose requests all fail.
+  const signingOutRef = useRef(false);
+  useEffect(() => {
+    function onSessionExpired() {
+      if (!apiUser || signingOutRef.current) return;
+      clearStoredApiUser();
+      setApiUser(null);
+      setCurrentUserIdState(null);
+      persist(null);
+      toast.error("Session expired", { description: "Please sign in again." });
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+  }, [apiUser, persist]);
 
   const logAudit = useCallback(
     (
@@ -359,12 +418,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    signingOutRef.current = true;
     const tokens = getTokens();
-    if (tokens) void logoutApi(tokens.refresh).catch(() => clearTokens());
-    else clearStoredApiUser();
+    const request = tokens
+      ? logoutApi(tokens.refresh).catch(() => clearTokens())
+      : Promise.resolve(clearStoredApiUser());
     setApiUser(null);
     setCurrentUserIdState(null);
     persist(null);
+    void request.finally(() => {
+      signingOutRef.current = false;
+    });
     toast.success("Signed out");
   }, [persist]);
 
@@ -474,7 +538,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     ({ name, phone, roles, preferredLanguage, locationId }) => {
       const normalized = phone.trim().replace(/\s+/g, "");
       if (allUsers.some((u) => u.phone === normalized)) {
-        logAudit(null, "Registration attempt", normalized, "failed", "Phone already registered", normalized);
+        logAudit(
+          null,
+          "Registration attempt",
+          normalized,
+          "failed",
+          "Phone already registered",
+          normalized,
+        );
         toast.error("That phone number is already registered", {
           description: "Try signing in instead.",
         });
@@ -545,7 +616,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           `A new ${productName} listing (${listing.quantity}${listing.unit}) matches your open request.`,
         ),
       );
-      logAudit(currentUser.id, "Created listing", `${productName} · ${listing.quantity}${listing.unit} · ${listing.id}`, "success");
+      logAudit(
+        currentUser.id,
+        "Created listing",
+        `${productName} · ${listing.quantity}${listing.unit} · ${listing.id}`,
+        "success",
+      );
       toast.success("Listing published");
     },
     [currentUser.id, allBuyerRequests, notify, logAudit],
@@ -603,7 +679,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       const price = listing.negotiable ? unitPrice : (unitPrice ?? listing.unitPrice ?? 0);
       if (!price || price <= 0) {
-        toast.error("Enter a price", { description: "This listing is negotiable — propose a price." });
+        toast.error("Enter a price", {
+          description: "This listing is negotiable — propose a price.",
+        });
         return false;
       }
       const now = new Date().toISOString().slice(0, 10);
@@ -672,13 +750,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             const nextOfferPrice = offerPrice ?? existing.offerPrice;
             return prev.map((l) =>
               l.kind === "produce" && l.listingId === listingId
-                ? { ...l, quantity: nextQty, ...(nextOfferPrice !== undefined ? { offerPrice: nextOfferPrice } : {}) }
+                ? {
+                    ...l,
+                    quantity: nextQty,
+                    ...(nextOfferPrice !== undefined ? { offerPrice: nextOfferPrice } : {}),
+                  }
                 : l,
             );
           }
           return [
             ...prev,
-            { kind: "produce" as const, listingId, quantity: nextQty, ...(offerPrice !== undefined ? { offerPrice } : {}) },
+            {
+              kind: "produce" as const,
+              listingId,
+              quantity: nextQty,
+              ...(offerPrice !== undefined ? { offerPrice } : {}),
+            },
           ];
         });
       } else {
@@ -710,8 +797,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const updateCartQuantity: WorkspaceContextValue["updateCartQuantity"] = useCallback(
     (kind, listingId, quantity) => {
       setCartItems((prev) => {
-        if (quantity <= 0) return prev.filter((l) => !(l.kind === kind && l.listingId === listingId));
-        return prev.map((l) => (l.kind === kind && l.listingId === listingId ? { ...l, quantity } : l));
+        if (quantity <= 0)
+          return prev.filter((l) => !(l.kind === kind && l.listingId === listingId));
+        return prev.map((l) =>
+          l.kind === kind && l.listingId === listingId ? { ...l, quantity } : l,
+        );
       });
     },
     [],
@@ -730,7 +820,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           const listing = allProduceListings.find((l) => l.id === line.listingId);
           const product = productById(listing?.productId);
           const seller = allUsers.find((u) => u.id === listing?.sellerId);
-          const unitPrice = listing?.negotiable ? (line.offerPrice ?? null) : (listing?.unitPrice ?? null);
+          const unitPrice = listing?.negotiable
+            ? (line.offerPrice ?? null)
+            : (listing?.unitPrice ?? null);
           return {
             ...line,
             productId: listing?.productId ?? "",
@@ -768,7 +860,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // Number of distinct lines, not the sum of physical quantities — kg/litre
   // amounts don't mean anything added across different products.
   const cartCount = cartItems.length;
-  const cartTotal = useMemo(() => cartLines.reduce((s, l) => s + (l.lineTotal ?? 0), 0), [cartLines]);
+  const cartTotal = useMemo(
+    () => cartLines.reduce((s, l) => s + (l.lineTotal ?? 0), 0),
+    [cartLines],
+  );
 
   const placeOrder: WorkspaceContextValue["placeOrder"] = useCallback(
     (paymentMethod) => {
@@ -791,7 +886,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           const listing = allProduceListings.find((l) => l.id === line.listingId);
           const price = listing?.negotiable ? line.offerPrice : listing?.unitPrice;
           const productName = productById(listing?.productId)?.name ?? "produce";
-          if (!listing || listing.status !== "available" || line.quantity > listing.quantity || !price || price <= 0) {
+          if (
+            !listing ||
+            listing.status !== "available" ||
+            line.quantity > listing.quantity ||
+            !price ||
+            price <= 0
+          ) {
             skipped += 1;
             auditEntries.push(() =>
               logAudit(
@@ -826,7 +927,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             createdAt: now,
             completedAt: null,
           });
-          produceUpdates.set(line.listingId, (produceUpdates.get(line.listingId) ?? 0) + line.quantity);
+          produceUpdates.set(
+            line.listingId,
+            (produceUpdates.get(line.listingId) ?? 0) + line.quantity,
+          );
           succeededKeys.add(key);
           auditEntries.push(() =>
             logAudit(
@@ -847,7 +951,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                 "Attempted purchase",
                 `${productName} · ${line.listingId}`,
                 "failed",
-                !listing ? "Listing no longer exists." : "Requested quantity exceeded available stock.",
+                !listing
+                  ? "Listing no longer exists."
+                  : "Requested quantity exceeded available stock.",
               ),
             );
             return;
@@ -883,7 +989,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       if (createdTransactions.length === 0) {
         auditEntries.forEach((log) => log());
-        toast.error("Nothing could be ordered", { description: "Those items are no longer available." });
+        toast.error("Nothing could be ordered", {
+          description: "Those items are no longer available.",
+        });
         return false;
       }
 
@@ -1096,11 +1204,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           `A buyer needs ${productName} — confirm your ${p.allocatedQuantity}${group.unit} allocation within 24h.`,
         ),
       );
-      toast.success(`Aggregation proposed to ${chosen.length} farmer${chosen.length > 1 ? "s" : ""}`, {
-        description: "Each farmer has 24h to accept or decline their allocation.",
-      });
+      toast.success(
+        `Aggregation proposed to ${chosen.length} farmer${chosen.length > 1 ? "s" : ""}`,
+        {
+          description: "Each farmer has 24h to accept or decline their allocation.",
+        },
+      );
     },
-    [allBuyerRequests, allAggregationGroups, allAggregationParticipants, allProduceListings, rankListingsForRequest, notify],
+    [
+      allBuyerRequests,
+      allAggregationGroups,
+      allAggregationParticipants,
+      allProduceListings,
+      rankListingsForRequest,
+      notify,
+    ],
   );
 
   const topUpAggregationGroup: WorkspaceContextValue["topUpAggregationGroup"] = useCallback(
@@ -1164,9 +1282,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           `A buyer needs ${productName} — confirm your ${p.allocatedQuantity}${group.unit} allocation within 24h.`,
         ),
       );
-      toast.success(`Found ${chosen.length} more farmer${chosen.length > 1 ? "s" : ""} for the shortfall`);
+      toast.success(
+        `Found ${chosen.length} more farmer${chosen.length > 1 ? "s" : ""} for the shortfall`,
+      );
     },
-    [allAggregationGroups, allAggregationParticipants, allBuyerRequests, allProduceListings, rankListingsForRequest, notify],
+    [
+      allAggregationGroups,
+      allAggregationParticipants,
+      allBuyerRequests,
+      allProduceListings,
+      rankListingsForRequest,
+      notify,
+    ],
   );
 
   const respondToAggregation: WorkspaceContextValue["respondToAggregation"] = useCallback(
@@ -1245,7 +1372,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             });
             setAllAggregationParticipants((prev) => [...newParticipants, ...prev]);
             setAllProduceListings((prev) =>
-              prev.map((l) => (chosen.some((c) => c.id === l.id) ? { ...l, status: "reserved" } : l)),
+              prev.map((l) =>
+                chosen.some((c) => c.id === l.id) ? { ...l, status: "reserved" } : l,
+              ),
             );
             const productName = productById(request.productId)?.name ?? "produce";
             newParticipants.forEach((p) =>
@@ -1304,7 +1433,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       setAllAggregationGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, status } : g)));
       setAllProduceListings((prev) =>
-        prev.map((l) => (accepted.some((p) => p.listingId === l.id) ? { ...l, status: "sold" } : l)),
+        prev.map((l) =>
+          accepted.some((p) => p.listingId === l.id) ? { ...l, status: "sold" } : l,
+        ),
       );
       if (group.requestId) {
         setAllBuyerRequests((prev) =>
@@ -1594,7 +1725,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   /* ------------------------------ Transactions ------------------------------ */
 
   const myTransactions = useMemo(
-    () => allTransactions.filter((t) => t.buyerId === currentUser.id || t.sellerId === currentUser.id),
+    () =>
+      allTransactions.filter((t) => t.buyerId === currentUser.id || t.sellerId === currentUser.id),
     [allTransactions, currentUser.id],
   );
 
@@ -1625,7 +1757,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         }),
       );
       if (bothWillBeConfirmed) {
-        setAllUsers((prev) => bumpReliability(bumpReliability(prev, tx.buyerId, 2), tx.sellerId, 2));
+        setAllUsers((prev) =>
+          bumpReliability(bumpReliability(prev, tx.buyerId, 2), tx.sellerId, 2),
+        );
       }
       const otherParty = currentUser.id === tx.buyerId ? tx.sellerId : tx.buyerId;
       notify(
@@ -1684,8 +1818,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         ),
       );
       if (tx) {
-        notify(tx.buyerId, "transaction", "Dispute resolved", "An admin marked this transaction complete.");
-        notify(tx.sellerId, "transaction", "Dispute resolved", "An admin marked this transaction complete.");
+        notify(
+          tx.buyerId,
+          "transaction",
+          "Dispute resolved",
+          "An admin marked this transaction complete.",
+        );
+        notify(
+          tx.sellerId,
+          "transaction",
+          "Dispute resolved",
+          "An admin marked this transaction complete.",
+        );
       }
       logAudit(
         currentUser.id,
@@ -1703,14 +1847,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const tx = allTransactions.find((t) => t.id === id);
       if (!tx) return;
       setAllTransactions((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status: "refund_requested", refundReason: reason } : t)),
+        prev.map((t) =>
+          t.id === id ? { ...t, status: "refund_requested", refundReason: reason } : t,
+        ),
       );
       const otherParty = currentUser.id === tx.buyerId ? tx.sellerId : tx.buyerId;
       notify(otherParty, "transaction", "Refund requested", reason);
       allUsers
         .filter((u) => u.roles.includes("admin"))
         .forEach((admin) => notify(admin.id, "transaction", "Refund requested", reason));
-      logAudit(currentUser.id, "Requested refund", `${productById(tx.productId)?.name ?? "Transaction"} · ${id}`, "success");
+      logAudit(
+        currentUser.id,
+        "Requested refund",
+        `${productById(tx.productId)?.name ?? "Transaction"} · ${id}`,
+        "success",
+      );
       toast.success("Refund requested", { description: "An admin will review this transaction." });
     },
     [allTransactions, allUsers, currentUser, notify, logAudit],
@@ -1821,7 +1972,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         sentAt: now,
       };
       setAllMessages((prev) => [...prev, message]);
-      setAllThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, lastMessageAt: now } : t)));
+      setAllThreads((prev) =>
+        prev.map((t) => (t.id === threadId ? { ...t, lastMessageAt: now } : t)),
+      );
       toast.success("Message sent");
     },
     [currentUser.id],
@@ -1858,7 +2011,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const district = districtOf(seller?.locationId);
         if (!district) return;
         const key = `${t.productId}__${district.id}`;
-        const entry = groups.get(key) ?? { productId: t.productId, districtId: district.id, prices: [] };
+        const entry = groups.get(key) ?? {
+          productId: t.productId,
+          districtId: district.id,
+          prices: [],
+        };
         entry.prices.push(t.unitPrice);
         groups.set(key, entry);
       });
@@ -1903,7 +2060,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         "You were vouched for",
         `${currentUser.name} vouched for you on Agribridge.`,
       );
-      toast.success("Endorsement added", { description: "Their reliability tier has been boosted." });
+      toast.success("Endorsement added", {
+        description: "Their reliability tier has been boosted.",
+      });
     },
     [currentUser, notify],
   );
@@ -1992,7 +2151,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     (id, verified) => {
       const target = allUsers.find((u) => u.id === id);
       setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isVerified: verified } : u)));
-      logAudit(currentUser.id, verified ? "Verified user" : "Unverified user", target?.name ?? id, "success");
+      logAudit(
+        currentUser.id,
+        verified ? "Verified user" : "Unverified user",
+        target?.name ?? id,
+        "success",
+      );
       toast.success(verified ? "User verified" : "Verification removed");
     },
     [allUsers, currentUser.id, logAudit],
@@ -2004,7 +2168,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setAllUsers((prev) =>
         prev.map((u) => (u.id === id ? { ...u, status: suspended ? "suspended" : "active" } : u)),
       );
-      logAudit(currentUser.id, suspended ? "Suspended account" : "Reinstated account", target?.name ?? id, "success");
+      logAudit(
+        currentUser.id,
+        suspended ? "Suspended account" : "Reinstated account",
+        target?.name ?? id,
+        "success",
+      );
       toast.success(suspended ? "User suspended" : "User reinstated");
     },
     [allUsers, currentUser.id, logAudit],
@@ -2013,7 +2182,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const expireListing: WorkspaceContextValue["expireListing"] = useCallback(
     (id) => {
       const listing = allProduceListings.find((l) => l.id === id);
-      setAllProduceListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: "expired" } : l)));
+      setAllProduceListings((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, status: "expired" } : l)),
+      );
       logAudit(
         currentUser.id,
         "Expired listing",

@@ -124,6 +124,11 @@ export interface ApiContact {
 
 export type UserStatus = "active" | "suspended" | "deleted";
 
+/** The backend's role enum — a user holds exactly ONE of these. There is no
+ * separate "admin" value: platform admins are `superadmin`, which this app
+ * treats exactly like its own `admin` role (see the mapper). */
+export type ApiRole = "superadmin" | "organization" | "farmer" | "buyer" | "seller";
+
 export interface ApiUser {
   id: number;
   phone: string;
@@ -136,6 +141,10 @@ export interface ApiUser {
   is_verified: boolean;
   reliability_score: string;
   notification_preferences: Record<string, unknown>;
+  /** Single access role governing this user ("superadmin"/"organization"/
+   * "farmer"/"buyer"/"seller"). Optional defensively — some responses
+   * serialize the profile without it; the mapper falls back to "farmer". */
+  roles?: ApiRole;
   status: UserStatus;
   last_login_at: string | null;
   created_at: string;
@@ -270,7 +279,8 @@ export interface ApiListingPhoto {
   created_at: string;
 }
 
-export type SourcingRequestStatus = "open" | "matched" | "partially_filled" | "filled" | "cancelled";
+export type SourcingRequestStatus =
+  "open" | "matched" | "partially_filled" | "filled" | "cancelled";
 
 /** The `/requests/` resource — buyer sourcing requests. Named `ApiSourcingRequest`
  * here to avoid clashing with the mock domain's own `BuyerRequest` type. */
@@ -359,7 +369,8 @@ export interface ApiGrpPledge {
 /* ------------------------------------ Transactions ------------------------------------ */
 
 export type OrderChannel = "web" | "mobile" | "ussd" | "aggregation" | "group_purchase";
-export type OrderStatus = "draft" | "placed" | "confirmed" | "in_delivery" | "delivered" | "completed" | "cancelled";
+export type OrderStatus =
+  "draft" | "placed" | "confirmed" | "in_delivery" | "delivered" | "completed" | "cancelled";
 
 export interface ApiOrder {
   id: number;
@@ -588,7 +599,8 @@ export interface ApiMessage {
   sent_at: string;
 }
 
-export type NotifType = "listing_match" | "order_status" | "payment" | "delivery" | "dispute" | "system";
+export type NotifType =
+  "listing_match" | "order_status" | "payment" | "delivery" | "dispute" | "system";
 export type NotifChannel = "in_app" | "sms" | "push" | "email";
 
 export interface ApiNotification {

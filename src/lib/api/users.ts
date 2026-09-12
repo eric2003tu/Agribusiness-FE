@@ -1,5 +1,5 @@
 import { apiRequest, buildQueryString, type ApiPage } from "./client";
-import type { ApiUser, UserStatus as ApiUserStatus } from "./types";
+import type { ApiRole, ApiUser, UserStatus as ApiUserStatus } from "./types";
 
 /**
  * Admin/staff account-management CRUD for user records — distinct from the
@@ -26,6 +26,13 @@ export function getUserApi(id: number) {
   return apiRequest<ApiUser>(`users/${id}/`);
 }
 
+/** The caller's own profile straight from the live server (`GET /users/me/`)
+ * — never the localStorage cache — so name, role and avatar reflect the
+ * latest server-side state when viewing your own profile page. */
+export function getMeApi() {
+  return apiRequest<ApiUser>("users/me/");
+}
+
 /** `PUT`/`PATCH` share this shape; there's no `password` field on this
  * endpoint at all — changing a password is a separate flow not exposed here. */
 export interface UserWritePayload {
@@ -40,6 +47,7 @@ export interface UserWritePayload {
   reliability_score?: string;
   notification_preferences?: Record<string, unknown>;
   status?: ApiUserStatus;
+  roles?: ApiRole;
 }
 
 export interface UserCreatePayload extends UserWritePayload {

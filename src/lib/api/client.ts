@@ -58,6 +58,21 @@ export function clearTokens() {
   removeStorage(REFRESH_TOKEN_KEY);
 }
 
+/** Fired once the client has given up on a session — an authenticated call
+ * 401'd and the refresh token also failed (expired/blacklisted), so the stored
+ * tokens were cleared. The workspace store listens for this to tear down the
+ * in-memory session so the user is actually signed out instead of stranded on
+ * pages whose API calls keep failing. */
+export const SESSION_EXPIRED_EVENT = "agribridge:session-expired";
+
+function emitSessionExpired() {
+  try {
+    window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+  } catch {
+    /* event unavailable */
+  }
+}
+
 /** DRF's error shape is either field-level ({"field": ["msg", ...]}) or a
  * non-field {"detail": "msg"} — callers inspect `.body` for either. */
 export class ApiError extends Error {
@@ -79,7 +94,9 @@ export class ApiError extends Error {
  * actionable rather than relaying the bare sentence everywhere it's used. */
 const GENERIC_PERMISSION_DENIED = "You do not have permission to perform this action.";
 
-export function apiErrorMessage(body: Record<string, unknown> | null | undefined): string | undefined {
+export function apiErrorMessage(
+  body: Record<string, unknown> | null | undefined,
+): string | undefined {
   if (!body) return undefined;
   if (typeof body["detail"] === "string") {
     const detail = body["detail"];
@@ -97,7 +114,9 @@ export function apiErrorMessage(body: Record<string, unknown> | null | undefined
 
 /** Field-level DRF errors ({"phone": ["already registered"]}) as a flat
  * field -> first-message map, for inline form validation. Excludes `detail`. */
-export function apiFieldErrors(body: Record<string, unknown> | null | undefined): Record<string, string> {
+export function apiFieldErrors(
+  body: Record<string, unknown> | null | undefined,
+): Record<string, string> {
   if (!body) return {};
   const fields: Record<string, string> = {};
   for (const [key, value] of Object.entries(body)) {
@@ -118,7 +137,9 @@ export interface ApiPage<T> {
 /** Builds a query string from a params object, skipping undefined/null/""
  * values and coercing booleans/numbers to strings — shared by every
  * resource's `list*Api` function. */
-export function buildQueryString(params?: Record<string, string | number | boolean | undefined | null>): string {
+export function buildQueryString(
+  params?: Record<string, string | number | boolean | undefined | null>,
+): string {
   if (!params) return "";
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -199,6 +220,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       return apiRequest<T>(path, { ...options, _isRetry: true });
     }
     clearTokens();
+    emitSessionExpired();
   }
 
   if (!res.ok) {
