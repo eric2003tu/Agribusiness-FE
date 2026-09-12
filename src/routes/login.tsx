@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { KeyRound, Loader2, LogIn, Package, ShieldCheck, ShoppingBasket, Sprout, Truck } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, LogIn, Package, ShieldCheck, ShoppingBasket, Sprout, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,11 +35,14 @@ const ROLE_ICON: Record<Role, typeof Sprout> = {
 };
 
 function LoginPage() {
-  const { signIn, session, ready } = useWorkspace();
+  const { login, signIn, session, ready } = useWorkspace();
   const navigate = useNavigate();
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (ready && session) {
@@ -47,10 +50,17 @@ function LoginPage() {
     }
   }, [ready, session, navigate]);
 
-  function submit(nextPhone = phone, nextOtp = otp) {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
     setBusy(true);
-    signIn(nextPhone, nextOtp);
+    setFormError("");
+    setFieldErrors({});
+    const result = await login(identifier, password);
     setBusy(false);
+    if (!result.ok) {
+      setFormError(result.error ?? "Sign in failed.");
+      setFieldErrors(result.fieldErrors ?? {});
+    }
   }
 
   return (
@@ -81,41 +91,57 @@ function LoginPage() {
               Sign in to Agribridge
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Use your phone number and OTP, or pick a demo account below.
+              Use your phone number or email and your password.
             </p>
           </div>
 
-          <form
-            className="surface-card space-y-4 p-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              submit();
-            }}
-          >
+          <form className="surface-card space-y-4 p-6" onSubmit={submit}>
+            {formError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                {formError}
+              </div>
+            )}
             <div className="grid gap-2">
-              <Label htmlFor="phone">Phone number</Label>
+              <Label htmlFor="identifier">Phone or email</Label>
               <Input
-                id="phone"
-                type="tel"
-                autoComplete="tel"
-                placeholder="+250788000000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                id="identifier"
+                type="text"
+                autoComplete="username"
+                placeholder="+250788000000 or you@example.com"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
               />
+              {fieldErrors["identifier"] && (
+                <p className="text-xs text-destructive">{fieldErrors["identifier"]}</p>
+              )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="otp">OTP code</Label>
-              <Input
-                id="otp"
-                type="password"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="••••"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-              />
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+              {fieldErrors["password"] && (
+                <p className="text-xs text-destructive">{fieldErrors["password"]}</p>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
@@ -133,7 +159,7 @@ function LoginPage() {
           <div className="mt-8">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <KeyRound className="size-3.5" />
-              Demo accounts
+              Or continue with a demo account (mock data)
             </div>
             <ul className="mt-3 space-y-3">
               {DEMO_CREDENTIALS.map((c) => {
@@ -160,11 +186,7 @@ function LoginPage() {
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          setPhone(c.phone);
-                          setOtp(c.otp);
-                          submit(c.phone, c.otp);
-                        }}
+                        onClick={() => signIn(c.phone, c.otp)}
                       >
                         Use
                       </Button>

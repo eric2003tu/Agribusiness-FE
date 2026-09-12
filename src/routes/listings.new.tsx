@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Sparkles } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,143 +8,344 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhotoUploader } from "@/components/photo-uploader";
-import { ProductIllustration } from "@/components/product-illustration";
-import { useWorkspace } from "@/lib/workspace-store";
-import { formatQuantity, formatRwf } from "@/lib/format";
-import { DISTRICTS, districtOf, locationLabel, locations, productById, products, type ListingScope, type Unit } from "@/lib/mock-data";
+import { getStoredApiUser } from "@/lib/api/auth";
+import { apiErrorMessage, apiFieldErrors, ApiError, getTokens, resolveMediaUrl } from "@/lib/api/client";
+import { listLocationsApi } from "@/lib/api/reference";
+import { listProductsApi, listVariantsApi } from "@/lib/api/products";
+import { listUomsApi } from "@/lib/api/reference";
+import { createListingApi, createListingPhotoApi, type ListingCreatePayload } from "@/lib/api/listings";
+import { useApiList } from "@/hooks/use-api-list";
+import type { ApiListing, ApiListingPhoto, ListingScope } from "@/lib/api/types";
+
+type UploadedPhoto = Omit<ApiListingPhoto, "created_at">;
 
 export const Route = createFileRoute("/listings/new")({
   head: () => ({ meta: [{ title: "New listing — Agribridge" }] }),
   component: NewListingPage,
 });
 
-const produceProducts = products.filter((p) => p.type === "produce");
-
-function subLocationsOf(districtId: string) {
-  return locations.filter(
-    (l) => l.level !== "region" && l.level !== "district" && districtOf(l.id)?.id === districtId,
-  );
+async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type || "image/jpeg" });
 }
 
 function NewListingPage() {
-  const { addListing, currentUser, marketPriceRecords } = useWorkspace();
-  const navigate = useNavigate();
-  const [productId, setProductId] = useState(produceProducts[0]?.id ?? "");
-  const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState<Unit>("kg");
+  const apiUser = getStoredApiUser();
+  const hasRealSession = Boolean(apiUser && getTokens());
+
+  const productsList = useApiList(() => listProductsApi({ prod_type: "produce", is_active: true, page_size: 100 }), []);
+  const uomsList = useApiList(() => listUomsApi({ page_size: 100 }), []);
+  const locationsList = useApiList(() => listLocationsApi({ page_size: 100 }), []);
+
+  const [productId, setProductId] = useState("");
+  const variantsList = useApiList(
+    () => listVariantsApi({ ...(productId ? { product: Number(productId) } : {}), is_active: true, page_size: 100 }),
+    [productId],
+  );
+
+  const [variantId, setVariantId] = useState("");
+  const [qtyAvailable, setQtyAvailable] = useState("");
+  const [uomId, setUomId] = useState("");
   const [negotiable, setNegotiable] = useState(false);
   const [unitPrice, setUnitPrice] = useState("");
-  const [districtId, setDistrictId] = useState(DISTRICTS[0]?.id ?? "");
-  const [locationId, setLocationId] = useState(DISTRICTS[0]?.id ?? "");
+  const [locationId, setLocationId] = useState("");
   const [harvestDate, setHarvestDate] = useState(new Date().toISOString().slice(0, 10));
-  const [qualityGrade, setQualityGrade] = useState("");
-  const [listingScope, setListingScope] = useState<ListingScope>("commercial");
+  const [grade, setGrade] = useState("");
+  const [scope, setScope] = useState<ListingScope>("commercial");
   const [photos, setPhotos] = useState<string[]>([]);
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState<ApiListing | null>(null);
+  const [uploadedPhotos, setUploadedPhotos] = useState<UploadedPhoto[]>([]);
+  const [photoWarning, setPhotoWarning] = useState("");
 
-  const product = productById(productId);
-  const district = DISTRICTS.find((d) => d.id === districtId);
-  const subLocations = subLocationsOf(districtId);
-  const marketPrice = marketPriceRecords
-    .filter((r) => r.productId === productId && r.districtId === districtId)
-    .sort((a, b) => a.avgPrice - b.avgPrice)[0];
+  const selectedProduct = productsList.items.find((p) => String(p.id) === productId);
 
-  function handleDistrictChange(next: string) {
-    setDistrictId(next);
-    setLocationId(next);
+  function resetForm() {
+    setProductId("");
+    setVariantId("");
+    setQtyAvailable("");
+    setUomId("");
+    setNegotiable(false);
+    setUnitPrice("");
+    setLocationId("");
+    setHarvestDate(new Date().toISOString().slice(0, 10));
+    setGrade("");
+    setScope("commercial");
+    setPhotos([]);
+    setFormError("");
+    setFieldErrors({});
+    setCreated(null);
+    setUploadedPhotos([]);
+    setPhotoWarning("");
   }
 
-  function submit() {
-    const qty = Number(quantity);
-    if (!productId || !qty || qty <= 0 || !locationId) {
-      setError("Fill in a valid quantity.");
-      return;
-    }
-    if (photos.length === 0) {
-      setError("Add at least one product photo — buyers trust listings with real photos.");
-      return;
-    }
-    setError("");
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 30);
-    addListing({
-      productId,
-      quantity: qty,
-      unit,
-      unitPrice: negotiable ? null : Number(unitPrice) || null,
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!apiUser) return;
+    if (!variantId || !qtyAvailable.trim() || !uomId || !locationId || !harvestDate) return;
+    setBusy(true);
+    setFormError("");
+    setFieldErrors({});
+    setPhotoWarning("");
+    const payload: ListingCreatePayload = {
+      seller_user: apiUser.id,
+      variant: Number(variantId),
+      qty_available: qtyAvailable.trim(),
+      uom: Number(uomId),
+      location: Number(locationId),
+      harvest_date: harvestDate,
       negotiable,
-      locationId,
-      harvestDate,
-      ...(qualityGrade ? { qualityGrade } : {}),
-      listingScope,
-      expiresAt: expires.toISOString().slice(0, 10),
-      photos,
-    });
-    void navigate({ to: "/listings" });
+      scope,
+      status: "available",
+      ...(negotiable ? {} : unitPrice.trim() ? { unit_price: unitPrice.trim() } : {}),
+      ...(grade.trim() ? { grade: grade.trim() } : {}),
+    };
+    try {
+      const listing = await createListingApi(payload);
+      setCreated(listing);
+
+      if (photos.length > 0) {
+        const uploadFailures: string[] = [];
+        const succeeded: UploadedPhoto[] = [];
+        for (let i = 0; i < photos.length; i++) {
+          try {
+            const file = await dataUrlToFile(photos[i] as string, `listing-${listing.id}-photo-${i + 1}.jpg`);
+            const uploaded = await createListingPhotoApi({ listing: listing.id, photo: file });
+            succeeded.push(uploaded);
+          } catch {
+            uploadFailures.push(String(i + 1));
+          }
+        }
+        setUploadedPhotos(succeeded);
+        if (uploadFailures.length > 0) {
+          setPhotoWarning(
+            `${succeeded.length} of ${photos.length} photo(s) uploaded — photo(s) ${uploadFailures.join(", ")} failed.`,
+          );
+        }
+      }
+    } catch (err) {
+      const body = err instanceof ApiError ? err.body : null;
+      setFormError(apiErrorMessage(body) ?? "Could not reach the server.");
+      setFieldErrors(apiFieldErrors(body));
+    } finally {
+      setBusy(false);
+    }
   }
+
+  if (!hasRealSession) {
+    return (
+      <AppShell title="New produce listing" description="List your harvest on the live marketplace.">
+        <div className="surface-card mx-auto max-w-md space-y-3 p-6 text-center">
+          <AlertTriangle className="mx-auto size-8 text-amber-500" />
+          <h2 className="text-sm font-semibold text-foreground">Sign in with a real account</h2>
+          <p className="text-sm text-muted-foreground">
+            Creating a live listing writes to the real AgriBridge API, so it needs a real signed-in account — not
+            the mock demo-account switcher. Sign in (or register) with a real phone number and password first.
+          </p>
+          <Button asChild>
+            <Link to="/login">Go to sign in</Link>
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (created) {
+    return (
+      <AppShell title="New produce listing" description="List your harvest on the live marketplace.">
+        <div className="surface-card mx-auto max-w-lg space-y-4 p-6">
+          <div className="flex items-center gap-2 text-emerald-600">
+            <CheckCircle2 className="size-6" />
+            <h2 className="text-sm font-semibold">Listing published</h2>
+          </div>
+          {photoWarning && <p className="text-sm text-amber-600">{photoWarning}</p>}
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Listing ID</dt>
+              <dd className="font-medium text-foreground">#{created.id}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Quantity</dt>
+              <dd className="font-medium text-foreground">{created.qty_available}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Price</dt>
+              <dd className="font-medium text-foreground">
+                {created.negotiable ? "Negotiable" : (created.unit_price ?? "—")}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Harvest date</dt>
+              <dd className="font-medium text-foreground">{created.harvest_date}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Status</dt>
+              <dd className="font-medium text-foreground">{created.status}</dd>
+            </div>
+          </dl>
+
+          {uploadedPhotos.length > 0 && (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Uploaded photos ({uploadedPhotos.length})
+              </p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {uploadedPhotos.map((p) => (
+                  <img
+                    key={p.id}
+                    src={resolveMediaUrl(p.photo)}
+                    alt={`Listing ${created.id} photo ${p.id}`}
+                    className="aspect-square w-full rounded-lg border border-border object-cover"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            This was saved to the live AgriBridge API. There's no public "browse real listings" page yet — this
+            confirmation is the only place it's shown right now.
+          </p>
+          <div className="flex gap-2">
+            <Button onClick={resetForm}>List another</Button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const noProducts = !productsList.loading && productsList.items.length === 0;
+  const noLocations = !locationsList.loading && locationsList.items.length === 0;
 
   return (
-    <AppShell title="New produce listing" description="List your harvest for buyers and other farmers to find.">
+    <AppShell title="New produce listing" description="List your harvest on the live AgriBridge marketplace.">
+      {(noProducts || noLocations) && (
+        <div className="surface-card mb-6 flex items-start gap-3 border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <p>
+            {noProducts && "The live catalog has no products yet. "}
+            {noLocations && "The live location tree has no entries yet. "}
+            Add them via the admin{" "}
+            <Link to="/catalog-data" className="underline">
+              Catalog
+            </Link>{" "}
+            /{" "}
+            <Link to="/reference-data" className="underline">
+              Reference data
+            </Link>{" "}
+            pages before this form has anything to select.
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <form
           className="surface-card space-y-5 p-6 lg:col-span-2"
           onSubmit={(e) => {
-            e.preventDefault();
-            submit();
+            void submit(e);
           }}
         >
-          <div className="flex items-end gap-3">
-            <ProductIllustration productId={productId} className="size-14" />
-            <div className="grid flex-1 gap-2">
-              <Label>Product</Label>
-              <Select value={productId} onValueChange={setProductId}>
+          {formError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              {formError}
+            </div>
+          )}
+
+          <div className="grid gap-2">
+            <Label>Product</Label>
+            <Select
+              value={productId}
+              onValueChange={(v) => {
+                setProductId(v);
+                setVariantId("");
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={productsList.items.length ? "Select a product" : "No products yet"} />
+              </SelectTrigger>
+              <SelectContent>
+                {productsList.items.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>Variant</Label>
+              <Select value={variantId} onValueChange={setVariantId} disabled={!productId}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue
+                    placeholder={
+                      !productId ? "Pick a product first" : variantsList.items.length ? "Select a variant" : "No variants yet"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {produceProducts.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
+                  {variantsList.items.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {fieldErrors["variant"] && <p className="text-xs text-destructive">{fieldErrors["variant"]}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Unit of measure</Label>
+              <Select value={uomId} onValueChange={setUomId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={uomsList.items.length ? "Select" : "None yet"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {uomsList.items.map((u) => (
+                    <SelectItem key={u.id} value={String(u.id)}>
+                      {u.name} ({u.symbol})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors["uom"] && <p className="text-xs text-destructive">{fieldErrors["uom"]}</p>}
             </div>
           </div>
 
-          {marketPrice && (
-            <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary-soft px-3 py-2 text-sm text-primary">
-              <Sparkles className="size-3.5 shrink-0" />
-              Market price in {district?.name}: {formatRwf(marketPrice.avgPrice)}/{product?.defaultUnit}
-            </div>
-          )}
-
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="quantity">Quantity</Label>
+              <Label htmlFor="quantity">Quantity available</Label>
               <Input
                 id="quantity"
                 type="number"
-                min={1}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                min={0}
+                step="0.001"
+                value={qtyAvailable}
+                onChange={(e) => setQtyAvailable(e.target.value)}
                 required
               />
+              {fieldErrors["qty_available"] && (
+                <p className="text-xs text-destructive">{fieldErrors["qty_available"]}</p>
+              )}
             </div>
             <div className="grid gap-2">
-              <Label>Unit</Label>
-              <Select value={unit} onValueChange={(v) => setUnit(v as Unit)}>
+              <Label>Location</Label>
+              <Select value={locationId} onValueChange={setLocationId}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={locationsList.items.length ? "Select a location" : "None yet"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="kg">kg</SelectItem>
-                  <SelectItem value="ton">ton</SelectItem>
-                  <SelectItem value="bag">bag (50kg)</SelectItem>
-                  <SelectItem value="litre">litre</SelectItem>
-                  <SelectItem value="piece">piece</SelectItem>
+                  {locationsList.items.map((l) => (
+                    <SelectItem key={l.id} value={String(l.id)}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {fieldErrors["location"] && <p className="text-xs text-destructive">{fieldErrors["location"]}</p>}
             </div>
           </div>
 
@@ -158,50 +359,17 @@ function NewListingPage() {
 
           {!negotiable && (
             <div className="grid gap-2">
-              <Label htmlFor="price">Unit price (RWF)</Label>
+              <Label htmlFor="price">Unit price</Label>
               <Input
                 id="price"
                 type="number"
                 min={0}
+                step="0.01"
                 value={unitPrice}
                 onChange={(e) => setUnitPrice(e.target.value)}
               />
             </div>
           )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>District</Label>
-              <Select value={districtId} onValueChange={handleDistrictChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DISTRICTS.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Specific area (optional)</Label>
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={districtId}>Whole district</SelectItem>
-                  {subLocations.map((l) => (
-                    <SelectItem key={l.id} value={l.id}>
-                      {l.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
@@ -211,30 +379,18 @@ function NewListingPage() {
                 type="date"
                 value={harvestDate}
                 onChange={(e) => setHarvestDate(e.target.value)}
+                required
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="grade">Quality grade (optional)</Label>
-              <Input
-                id="grade"
-                placeholder="Grade A"
-                value={qualityGrade}
-                onChange={(e) => setQualityGrade(e.target.value)}
-              />
+              <Input id="grade" placeholder="Grade A" value={grade} onChange={(e) => setGrade(e.target.value)} />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label>Product photos</Label>
-            <p className="text-xs text-muted-foreground">
-              Add at least one real photo of your harvest — listings with photos sell faster.
-            </p>
-            <PhotoUploader photos={photos} onChange={setPhotos} />
-          </div>
-
-          <div className="grid gap-2">
             <Label>Listing scope</Label>
-            <Select value={listingScope} onValueChange={(v) => setListingScope(v as ListingScope)}>
+            <Select value={scope} onValueChange={(v) => setScope(v as ListingScope)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -245,56 +401,49 @@ function NewListingPage() {
             </Select>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          <div className="grid gap-2">
+            <Label>Product photos (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Uploaded to the live API as separate listing photos once the listing is created.
+            </p>
+            <PhotoUploader photos={photos} onChange={setPhotos} />
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => navigate({ to: "/listings" })}>
-              Cancel
+            <Button type="submit" disabled={busy}>
+              {busy && <Loader2 className="size-4 animate-spin" />}
+              Publish listing
             </Button>
-            <Button type="submit">Publish listing</Button>
           </div>
         </form>
 
         <div className="space-y-6">
-          <section className="surface-card sticky top-20 overflow-hidden">
-            {photos[0] ? (
-              <img src={photos[0]} alt="Listing preview" className="h-40 w-full object-cover" />
-            ) : (
-              <ProductIllustration productId={productId} className="h-40 w-full" rounded="rounded-none" />
-            )}
-            <div className="p-5">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{product?.name ?? "Product"}</p>
-              <p className="text-sm text-muted-foreground">Listed by {currentUser.name}</p>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Quantity</dt>
-                  <dd className="font-medium text-foreground">
-                    {quantity ? formatQuantity(Number(quantity), unit) : "—"}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Price</dt>
-                  <dd className="font-medium text-foreground">
-                    {negotiable ? "Negotiable" : unitPrice ? `${formatRwf(Number(unitPrice))}/${unit}` : "—"}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Location</dt>
-                  <dd className="text-right font-medium text-foreground">{locationLabel(locationId)}</dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Harvest date</dt>
-                  <dd className="font-medium text-foreground">{harvestDate}</dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Scope</dt>
-                  <dd className="font-medium text-foreground">
-                    {listingScope === "peer" ? "Peer-to-peer" : "Commercial"}
-                  </dd>
-                </div>
-              </dl>
-            </div>
+          <section className="surface-card p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">{selectedProduct?.name ?? "Product"}</p>
+            <p className="text-sm text-muted-foreground">Listed by {apiUser?.full_name}</p>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Quantity</dt>
+                <dd className="font-medium text-foreground">{qtyAvailable || "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Price</dt>
+                <dd className="font-medium text-foreground">
+                  {negotiable ? "Negotiable" : unitPrice ? unitPrice : "—"}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Harvest date</dt>
+                <dd className="font-medium text-foreground">{harvestDate}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted-foreground">Scope</dt>
+                <dd className="font-medium text-foreground">
+                  {scope === "peer" ? "Peer-to-peer" : "Commercial"}
+                </dd>
+              </div>
+            </dl>
           </section>
         </div>
       </div>

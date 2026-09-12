@@ -5,17 +5,27 @@ import {
   Boxes,
   Handshake,
   LineChart,
+  MapPinned,
   Package,
   ShieldCheck,
   ShoppingBasket,
+  ShoppingCart,
   Sparkles,
   Sprout,
+  Store,
+  TrendingUp,
   Truck,
+  Users,
+  Wallet,
 } from "lucide-react";
 import { HeroSlideshow } from "@/components/hero-slideshow";
 import { LandingNavbar } from "@/components/landing-navbar";
 import { Photo } from "@/components/photo";
+import { ProductIllustration } from "@/components/product-illustration";
 import { Button } from "@/components/ui/button";
+import { useWorkspace } from "@/lib/workspace-store";
+import { formatRwf } from "@/lib/format";
+import { DISTRICTS, locationLabel, productById } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -135,7 +145,36 @@ const ROLES: RoleCard[] = [
   },
 ];
 
+interface CategoryCard {
+  productId: string;
+  name: string;
+}
+
+const CATEGORY_SHORTCUTS: CategoryCard[] = [
+  { productId: "prod-maize", name: "Cereals" },
+  { productId: "prod-beans", name: "Legumes" },
+  { productId: "prod-irish-potato", name: "Tubers" },
+  { productId: "prod-tomato", name: "Vegetables" },
+  { productId: "prod-banana", name: "Fruits" },
+  { productId: "prod-milk", name: "Dairy" },
+];
+
 function LandingPage() {
+  const { produceListings, users, transactions } = useWorkspace();
+
+  const availableListings = produceListings.filter((l) => l.status === "available");
+  const featured = availableListings.slice(0, 8);
+  const totalTraded = transactions
+    .filter((t) => t.status === "completed")
+    .reduce((sum, t) => sum + t.quantity * t.unitPrice, 0);
+
+  const stats = [
+    { icon: Store, label: "Active listings", value: `${availableListings.length}+` },
+    { icon: MapPinned, label: "Districts covered", value: `${DISTRICTS.length}` },
+    { icon: Users, label: "Farmers & buyers", value: `${users.length}+` },
+    { icon: Wallet, label: "Traded on Agribridge", value: formatRwf(totalTraded) },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <LandingNavbar />
@@ -148,20 +187,22 @@ function LandingPage() {
               Digital marketplace for Rwandan agriculture
             </span>
             <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl">
-              Sell your harvest. Buy in bulk. Never guess the price again.
+              Fresh produce and farm inputs, traded directly.
             </h1>
             <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
-              Agribridge connects farmers, buyers and input suppliers directly — with bulk
-              aggregation, group input purchasing and transparent district-by-district pricing.
+              Browse real listings by product and district, add them to your cart, and pay in a
+              few taps — or list your own harvest and reach buyers across Rwanda today.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button asChild size="lg">
                 <Link to="/register">
-                  Get started free <ArrowRight className="size-4" />
+                  <ShoppingCart className="size-4" /> Start shopping
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <Link to="/login">Sign in</Link>
+                <Link to="/register">
+                  Sell your harvest <ArrowRight className="size-4" />
+                </Link>
               </Button>
             </div>
             <p className="mt-6 text-xs text-muted-foreground">
@@ -180,6 +221,97 @@ function LandingPage() {
                 <p className="text-xs text-muted-foreground">Every deal, logged and trusted</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Live stats strip */}
+        <div className="border-t border-border bg-muted/30">
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 py-6 sm:px-6 lg:grid-cols-4 lg:px-8">
+            {stats.map((stat) => (
+              <div key={stat.label} className="flex items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                  <stat.icon className="size-5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-semibold text-foreground">{stat.value}</p>
+                  <p className="truncate text-xs text-muted-foreground">{stat.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Shop by category */}
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Shop by category</h2>
+          <Link to="/register" className="text-sm font-medium text-primary hover:underline">
+            View all products
+          </Link>
+        </div>
+        <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {CATEGORY_SHORTCUTS.map((cat) => (
+            <Link
+              key={cat.name}
+              to="/register"
+              className="surface-card flex flex-col items-center gap-2 p-4 text-center transition-shadow hover:shadow-md"
+            >
+              <ProductIllustration productId={cat.productId} className="size-14" rounded="rounded-full" />
+              <span className="text-xs font-medium text-foreground">{cat.name}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Featured listings */}
+      <section className="border-y border-border bg-muted/30">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                <TrendingUp className="size-5 text-primary" /> Popular right now
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Real listings on the marketplace today — sign up to add them to your cart.
+              </p>
+            </div>
+            <Link to="/register" className="text-sm font-medium text-primary hover:underline">
+              Browse the full marketplace
+            </Link>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {featured.map((listing) => {
+              const product = productById(listing.productId);
+              return (
+                <div key={listing.id} className="surface-card overflow-hidden">
+                  {listing.photos?.[0] ? (
+                    <img
+                      src={listing.photos[0]}
+                      alt={product?.name ?? "Listing"}
+                      className="h-36 w-full object-cover"
+                    />
+                  ) : (
+                    <ProductIllustration productId={listing.productId} className="h-36 w-full" rounded="rounded-none" />
+                  )}
+                  <div className="p-4">
+                    <p className="text-sm font-semibold text-foreground">{product?.name ?? "Product"}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{locationLabel(listing.locationId)}</p>
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                      {listing.unitPrice ? (
+                        <>
+                          {formatRwf(listing.unitPrice)}
+                          <span className="text-xs font-normal text-muted-foreground">/{listing.unit}</span>
+                        </>
+                      ) : (
+                        <span className="text-sm font-medium text-muted-foreground">Negotiable</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

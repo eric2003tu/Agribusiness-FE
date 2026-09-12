@@ -12,4 +12,10 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    // The AgriBridge backend's CORS_ALLOWED_ORIGINS only allows http://localhost:3000 — fixing
+    // the dev server here (instead of letting it drift to 8080/8081/... when those are busy)
+    // keeps real API calls from silently CORS-failing in the browser ("Could not reach the server").
+    server: { port: 3000, strictPort: true },
+  },
 });
