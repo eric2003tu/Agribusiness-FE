@@ -24,7 +24,7 @@ export interface ProductPayload {
   sku: string;
   name: string;
   slug: string;
-  category: number;
+  category?: number;
   prod_type: ProdType;
   default_uom: number;
   brand_org?: number | null;
@@ -41,11 +41,17 @@ export function createProductApi(payload: ProductPayload) {
 }
 
 export function updateProductApi(id: number, payload: ProductPayload) {
-  return apiRequest<Omit<ApiProduct, "created_at">>(`products/${id}/`, { method: "PUT", body: payload });
+  return apiRequest<Omit<ApiProduct, "created_at">>(`products/${id}/`, {
+    method: "PUT",
+    body: payload,
+  });
 }
 
 export function patchProductApi(id: number, payload: Partial<ProductPayload>) {
-  return apiRequest<Omit<ApiProduct, "created_at">>(`products/${id}/`, { method: "PATCH", body: payload });
+  return apiRequest<Omit<ApiProduct, "created_at">>(`products/${id}/`, {
+    method: "PATCH",
+    body: payload,
+  });
 }
 
 export function deleteProductApi(id: number) {
@@ -96,8 +102,14 @@ export function deleteVariantApi(id: number) {
 /* ------------------------------- Product images ------------------------------ */
 /* Real multipart file uploads, not URL strings — see the guide's "File uploads" convention. */
 
-export function listProductImagesApi(params?: { variant?: number; is_primary?: boolean; page_size?: number }) {
-  return apiRequest<ApiPage<ApiProductImage>>(`product-images/${buildQueryString(params)}`, { auth: false });
+export function listProductImagesApi(params?: {
+  variant?: number;
+  is_primary?: boolean;
+  page_size?: number;
+}) {
+  return apiRequest<ApiPage<ApiProductImage>>(`product-images/${buildQueryString(params)}`, {
+    auth: false,
+  });
 }
 
 export function getProductImageApi(id: number) {
@@ -115,13 +127,17 @@ function productImageFormData(payload: Partial<ProductImageUpload>): FormData {
   const form = new FormData();
   if (payload.variant !== undefined) form.append("variant", String(payload.variant));
   if (payload.image !== undefined) form.append("image", payload.image);
-  if (payload.display_order !== undefined) form.append("display_order", String(payload.display_order));
+  if (payload.display_order !== undefined)
+    form.append("display_order", String(payload.display_order));
   if (payload.is_primary !== undefined) form.append("is_primary", String(payload.is_primary));
   return form;
 }
 
 export function createProductImageApi(payload: ProductImageUpload) {
-  return apiRequest<ApiProductImage>("product-images/", { method: "POST", body: productImageFormData(payload) });
+  return apiRequest<ApiProductImage>("product-images/", {
+    method: "POST",
+    body: productImageFormData(payload),
+  });
 }
 
 export function updateProductImageApi(id: number, payload: ProductImageUpload) {

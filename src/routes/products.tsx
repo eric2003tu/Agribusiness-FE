@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { Boxes, CheckCircle2, Layers, Loader2, Package, Plus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { StatCard } from "@/components/stat-card";
 import { DataTable, type Column } from "@/components/data-table";
 import { useApiList } from "@/hooks/use-api-list";
@@ -21,7 +35,8 @@ import {
   patchProductApi,
   type ProductPayload,
 } from "@/lib/api/products";
-import type { ApiProduct, ProdType } from "@/lib/api/types";
+import type { ApiOrganizationFull, ApiProduct, ApiUom, ProdType } from "@/lib/api/types";
+import type { ApiCategory } from "@/lib/api/types";
 
 export const Route = createFileRoute("/products")({
   head: () => ({
@@ -42,7 +57,13 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-function LoadMoreButton({ hasMore, loadMore }: { hasMore: boolean; loadMore: () => Promise<void> }) {
+function LoadMoreButton({
+  hasMore,
+  loadMore,
+}: {
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+}) {
   const [busy, setBusy] = useState(false);
   if (!hasMore) return null;
   return (
@@ -65,91 +86,31 @@ function LoadMoreButton({ hasMore, loadMore }: { hasMore: boolean; loadMore: () 
 }
 
 function ProductsPage() {
-  const { items, loading, error, hasMore, loadMore, reload } = useApiList(() => listProductsApi({ page_size: 50 }), []);
+  const { items, loading, error, hasMore, loadMore, reload } = useApiList(
+    () => listProductsApi({ page_size: 50 }),
+    [],
+  );
   const categoriesList = useApiList(() => listCategoriesApi({ page_size: 200 }), []);
   const uomsList = useApiList(() => listUomsApi({ page_size: 100 }), []);
   const organizationsList = useApiList(() => listOrganizationsApi({ page_size: 100 }), []);
   const categories = categoriesList.items;
   const uoms = uomsList.items;
   const organizations = organizationsList.items;
-  const leafCategories = categories.filter((c) => c.is_leaf);
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [sku, setSku] = useState("");
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [prodType, setProdType] = useState<ProdType>("produce");
-  const [brandOrgId, setBrandOrgId] = useState("none");
-  const [defaultUomId, setDefaultUomId] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ApiProduct | null>(null);
   const [formError, setFormError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
 
-  function startEdit(p: ApiProduct) {
-    setEditingId(p.id);
-    setSku(p.sku);
-    setName(p.name);
-    setSlug(p.slug);
-    setCategoryId(String(p.category));
-    setProdType(p.prod_type);
-    setBrandOrgId(p.brand_org ? String(p.brand_org) : "none");
-    setDefaultUomId(String(p.default_uom));
-    setIsActive(p.is_active);
+  function openAdd() {
+    setEditingProduct(null);
     setFormError("");
-    setFieldErrors({});
-    setShowForm(true);
+    setDialogOpen(true);
   }
 
-  function resetForm() {
-    setEditingId(null);
-    setSku("");
-    setName("");
-    setSlug("");
-    setCategoryId("");
-    setProdType("produce");
-    setBrandOrgId("none");
-    setDefaultUomId("");
-    setIsActive(true);
+  function openEdit(p: ApiProduct) {
+    setEditingProduct(p);
     setFormError("");
-    setFieldErrors({});
-  }
-
-  function closeForm() {
-    resetForm();
-    setShowForm(false);
-  }
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!sku.trim() || !name.trim() || !slug.trim() || !categoryId || !defaultUomId) return;
-    setBusy(true);
-    setFormError("");
-    setFieldErrors({});
-    const payload: ProductPayload = {
-      sku: sku.trim(),
-      name: name.trim(),
-      slug: slug.trim(),
-      category: Number(categoryId),
-      prod_type: prodType,
-      default_uom: Number(defaultUomId),
-      ...(brandOrgId === "none" ? {} : { brand_org: Number(brandOrgId) }),
-      is_active: isActive,
-    };
-    try {
-      if (editingId) await patchProductApi(editingId, payload);
-      else await createProductApi(payload);
-      closeForm();
-      await reload();
-    } catch (err) {
-      const body = err instanceof ApiError ? err.body : null;
-      setFormError(apiErrorMessage(body) ?? "Could not reach the server.");
-      setFieldErrors(apiFieldErrors(body));
-    } finally {
-      setBusy(false);
-    }
+    setDialogOpen(true);
   }
 
   async function remove(id: number) {
@@ -157,7 +118,11 @@ function ProductsPage() {
       await deleteProductApi(id);
       await reload();
     } catch (err) {
-      setFormError(err instanceof ApiError ? (apiErrorMessage(err.body) ?? "Delete failed.") : "Could not reach the server.");
+      setFormError(
+        err instanceof ApiError
+          ? (apiErrorMessage(err.body) ?? "Delete failed.")
+          : "Could not reach the server.",
+      );
     }
   }
 
@@ -193,7 +158,12 @@ function ProductsPage() {
       header: "",
       render: (p) => (
         <div className="flex justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={() => startEdit(p)}>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/products/$productId" params={{ productId: String(p.id) }}>
+              View
+            </Link>
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
             Edit
           </Button>
           <Button size="sm" variant="outline" onClick={() => void remove(p.id)}>
@@ -210,17 +180,14 @@ function ProductsPage() {
       title="Products"
       description="Browse and manage the live AgriBridge product catalog."
       actions={
-        <Button
-          onClick={() => {
-            if (showForm) closeForm();
-            else setShowForm(true);
-          }}
-        >
+        <Button onClick={openAdd}>
           <Plus className="size-4" />
           Add product
         </Button>
       }
     >
+      {formError && <ErrorBanner message={formError} />}
+
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Package} title="Total products" value={items.length} tone="brand" />
         <StatCard
@@ -229,105 +196,19 @@ function ProductsPage() {
           value={items.filter((p) => p.is_active).length}
           tone="success"
         />
-        <StatCard icon={Layers} title="Produce" value={items.filter((p) => p.prod_type === "produce").length} tone="soft" />
-        <StatCard icon={Boxes} title="Inputs" value={items.filter((p) => p.prod_type === "input").length} tone="warning" />
+        <StatCard
+          icon={Layers}
+          title="Produce"
+          value={items.filter((p) => p.prod_type === "produce").length}
+          tone="soft"
+        />
+        <StatCard
+          icon={Boxes}
+          title="Inputs"
+          value={items.filter((p) => p.prod_type === "input").length}
+          tone="warning"
+        />
       </div>
-
-      {showForm && (
-        <section className="surface-card mb-6 p-5">
-          <h2 className="text-sm font-semibold text-foreground">{editingId ? "Edit product" : "Add a product"}</h2>
-          <ErrorBanner message={formError} />
-          <form className="mt-3 flex flex-wrap items-end gap-3" onSubmit={submit}>
-            <div className="grid gap-2">
-              <Label>SKU</Label>
-              <Input className="w-32" value={sku} onChange={(e) => setSku(e.target.value)} required />
-              {fieldErrors["sku"] && <p className="text-xs text-destructive">{fieldErrors["sku"]}</p>}
-            </div>
-            <div className="grid gap-2">
-              <Label>Name</Label>
-              <Input className="w-48" value={name} onChange={(e) => setName(e.target.value)} required />
-              {fieldErrors["name"] && <p className="text-xs text-destructive">{fieldErrors["name"]}</p>}
-            </div>
-            <div className="grid gap-2">
-              <Label>Slug</Label>
-              <Input className="w-40" value={slug} onChange={(e) => setSlug(e.target.value)} required />
-              {fieldErrors["slug"] && <p className="text-xs text-destructive">{fieldErrors["slug"]}</p>}
-            </div>
-            <div className="grid gap-2">
-              <Label>Type</Label>
-              <Select value={prodType} onValueChange={(v) => setProdType(v as ProdType)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="produce">Produce</SelectItem>
-                  <SelectItem value="input">Input</SelectItem>
-                  <SelectItem value="service">Service</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger className="w-44">
-                  <SelectValue placeholder={leafCategories.length ? "Select a category" : "No categories yet"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {leafCategories.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fieldErrors["category"] && <p className="text-xs text-destructive">{fieldErrors["category"]}</p>}
-            </div>
-            <div className="grid gap-2">
-              <Label>Default unit</Label>
-              <Select value={defaultUomId} onValueChange={setDefaultUomId}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder={uoms.length ? "Select" : "None yet"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {uoms.map((u) => (
-                    <SelectItem key={u.id} value={String(u.id)}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fieldErrors["default_uom"] && <p className="text-xs text-destructive">{fieldErrors["default_uom"]}</p>}
-            </div>
-            <div className="grid gap-2">
-              <Label>Brand (optional)</Label>
-              <Select value={brandOrgId} onValueChange={setBrandOrgId}>
-                <SelectTrigger className="w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {organizations.map((o) => (
-                    <SelectItem key={o.id} value={String(o.id)}>
-                      {o.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <label className="flex items-center gap-2 pb-2 text-sm text-foreground">
-              <Checkbox checked={isActive} onCheckedChange={(v) => setIsActive(v === true)} />
-              Active
-            </label>
-            <Button type="submit" disabled={busy}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-              {editingId ? "Save changes" : "Add product"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={closeForm}>
-              Cancel
-            </Button>
-          </form>
-        </section>
-      )}
 
       {error && <ErrorBanner message={error} />}
       {loading ? (
@@ -347,6 +228,231 @@ function ProductsPage() {
           <LoadMoreButton hasMore={hasMore} loadMore={loadMore} />
         </>
       )}
+
+      <ProductDialog
+        key={editingProduct?.id ?? "new"}
+        categories={categories}
+        uoms={uoms}
+        organizations={organizations}
+        product={editingProduct}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSaved={() => void reload()}
+      />
     </AppShell>
+  );
+}
+
+/* --------------------------------- Product dialog -------------------------------- */
+
+function ProductDialog({
+  categories,
+  uoms,
+  organizations,
+  product,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  categories: ApiCategory[];
+  uoms: ApiUom[];
+  organizations: ApiOrganizationFull[];
+  product: ApiProduct | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => void;
+}) {
+  const editingId = product?.id ?? null;
+  const leafCategories = categories.filter((c) => c.is_leaf);
+
+  const [sku, setSku] = useState(product?.sku ?? "");
+  const [name, setName] = useState(product?.name ?? "");
+  const [slug, setSlug] = useState(product?.slug ?? "");
+  const [categoryId, setCategoryId] = useState(product?.category ? String(product.category) : "");
+  const [prodType, setProdType] = useState<ProdType>(product?.prod_type ?? "produce");
+  const [brandOrgId, setBrandOrgId] = useState(
+    product?.brand_org ? String(product.brand_org) : "none",
+  );
+  const [defaultUomId, setDefaultUomId] = useState(
+    product?.default_uom ? String(product.default_uom) : "",
+  );
+  const [isActive, setIsActive] = useState(product?.is_active ?? true);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  function resetForm() {
+    setSku("");
+    setName("");
+    setSlug("");
+    setCategoryId("");
+    setProdType("produce");
+    setBrandOrgId("none");
+    setDefaultUomId("");
+    setIsActive(true);
+    setFormError("");
+    setFieldErrors({});
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const missing: Record<string, string> = {};
+    if (!defaultUomId) missing["default_uom"] = "Please choose a default unit.";
+    if (Object.keys(missing).length > 0) {
+      setFieldErrors(missing);
+      setFormError("");
+      return;
+    }
+    setBusy(true);
+    setFormError("");
+    setFieldErrors({});
+    const payload: ProductPayload = {
+      sku: sku.trim(),
+      name: name.trim(),
+      slug: slug.trim(),
+      ...(categoryId ? { category: Number(categoryId) } : {}),
+      prod_type: prodType,
+      default_uom: Number(defaultUomId),
+      ...(brandOrgId === "none" ? {} : { brand_org: Number(brandOrgId) }),
+      is_active: isActive,
+    };
+    try {
+      if (editingId) await patchProductApi(editingId, payload);
+      else await createProductApi(payload);
+      resetForm();
+      onOpenChange(false);
+      onSaved();
+    } catch (err) {
+      const body = err instanceof ApiError ? err.body : null;
+      setFormError(apiErrorMessage(body) ?? "Could not reach the server.");
+      setFieldErrors(apiFieldErrors(body));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const fieldError = (field: string) =>
+    fieldErrors[field] ? <p className="text-xs text-destructive">{fieldErrors[field]}</p> : null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{editingId ? "Edit product" : "Add a product"}</DialogTitle>
+          <DialogDescription>
+            {editingId
+              ? `Updating ${product?.name ?? `#${editingId}`}. Changes are saved to the live API (staff account required).`
+              : "Create a product in the master catalog, saved to the live API (staff account required)."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={(e) => void submit(e)} className="grid gap-3">
+          {formError && <ErrorBanner message={formError} />}
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>SKU</Label>
+              <Input value={sku} onChange={(e) => setSku(e.target.value)} required />
+              {fieldError("sku")}
+            </div>
+            <div className="grid gap-2">
+              <Label>Name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} required />
+              {fieldError("name")}
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Slug</Label>
+            <Input value={slug} onChange={(e) => setSlug(e.target.value)} required />
+            {fieldError("slug")}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>Type</Label>
+              <Select value={prodType} onValueChange={(v) => setProdType(v as ProdType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="produce">Produce</SelectItem>
+                  <SelectItem value="input">Input</SelectItem>
+                  <SelectItem value="service">Service</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Category (optional)</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={leafCategories.length ? "Select a category" : "No categories yet"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {leafCategories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldError("category")}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>Default unit</Label>
+              <Select value={defaultUomId} onValueChange={setDefaultUomId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={uoms.length ? "Select" : "None yet"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {uoms.map((u) => (
+                    <SelectItem key={u.id} value={String(u.id)}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldError("default_uom")}
+            </div>
+            <div className="grid gap-2">
+              <Label>Brand (optional)</Label>
+              <Select value={brandOrgId} onValueChange={setBrandOrgId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {organizations.map((o) => (
+                    <SelectItem key={o.id} value={String(o.id)}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 pb-2 text-sm text-foreground">
+            <Checkbox checked={isActive} onCheckedChange={(v) => setIsActive(v === true)} />
+            Active
+          </label>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy && <Loader2 className="size-4 animate-spin" />}
+              {editingId ? "Save changes" : "Add product"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

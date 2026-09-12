@@ -1,42 +1,26 @@
 import { useMemo, useState } from "react";
 import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Minus,
-  Plus,
-  Search,
-  ShoppingCart,
-  Sprout,
-  CheckCircle2,
-  Clock,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Clock3, Loader2, Plus, Search, Sprout, XCircle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ListingStatusBadge } from "@/components/status-badge";
-import { ReliabilityBadge } from "@/components/reliability-badge";
-import { ProductIllustration } from "@/components/product-illustration";
-import { useWorkspace } from "@/lib/workspace-store";
-import { formatQuantity, formatRwf } from "@/lib/format";
 import {
-  DISTRICTS,
-  LISTING_STATUS_LABELS,
-  districtOf,
-  locationLabel,
-  productById,
-  products,
-  type ListingStatus,
-  type ProduceListing,
-} from "@/lib/mock-data";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useApiList } from "@/hooks/use-api-list";
+import { getStoredApiUser } from "@/lib/api/auth";
+import { getTokens } from "@/lib/api/client";
+import { listListingsApi } from "@/lib/api/listings";
+import { listProductsApi, listVariantsApi } from "@/lib/api/products";
+import { listLocationsApi, listUomsApi } from "@/lib/api/reference";
+import type { ApiListing, ApiProduct, ApiUom, ApiVariant, ListingStatus } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
-
-const produceProducts = products.filter((p) => p.type === "produce");
-const PAGE_SIZE = 9;
 
 export const Route = createFileRoute("/listings")({
   validateSearch: (
@@ -47,140 +31,108 @@ export const Route = createFileRoute("/listings")({
   }),
   head: () => ({
     meta: [
-      { title: "Produce listings — Agribridge" },
+      { title: "Marketplace — Agribridge" },
       {
         name: "description",
-        content: "Browse farmer produce listings across Rwanda and add them to your cart.",
+        content: "Browse farmer produce listings from the live AgriBridge API.",
       },
     ],
   }),
   component: ListingsPage,
 });
 
-function ListingCard({ listing }: { listing: ProduceListing }) {
-  const { userById, currentUser, addToCart } = useWorkspace();
-  const [qty, setQty] = useState("1");
-  const product = productById(listing.productId);
-  const seller = userById(listing.sellerId);
-  const isOwner = currentUser.id === listing.sellerId;
-  const canBuy = !isOwner && listing.status === "available";
-  const maxQty = listing.quantity;
+const LISTING_STATUS_META: Record<ListingStatus, { label: string; className: string }> = {
+  available: { label: "Available", className: "bg-success/12 text-success" },
+  reserved: { label: "Reserved", className: "bg-warning/20 text-warning-foreground" },
+  sold: { label: "Sold", className: "bg-primary-soft text-primary" },
+  expired: { label: "Expired", className: "bg-muted text-muted-foreground" },
+};
 
+function ListingStatusBadge({ status }: { status: ListingStatus }) {
+  const meta = LISTING_STATUS_META[status];
   return (
-    <div
+    <span
       className={cn(
-        "surface-card flex flex-col overflow-hidden transition-shadow hover:shadow-md",
-        listing.status !== "available" && "opacity-80",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap",
+        meta.className,
       )}
     >
-      <div className="relative">
-        {listing.photos && listing.photos[0] ? (
-          <img src={listing.photos[0]} alt={product?.name ?? "Listing"} className="h-44 w-full object-cover" />
-        ) : (
-          <ProductIllustration productId={listing.productId} className="h-44 w-full" rounded="rounded-none" />
-        )}
-        <div className="absolute right-2 top-2">
-          <ListingStatusBadge status={listing.status} />
+      <span className="size-1.5 rounded-full bg-current" />
+      {meta.label}
+    </span>
+  );
+}
+
+function ListingCard({
+  listing,
+  product,
+  variant,
+  uom,
+  locationName,
+}: {
+  listing: ApiListing;
+  product: ApiProduct | undefined;
+  variant: ApiVariant | undefined;
+  uom: ApiUom | undefined;
+  locationName: string;
+}) {
+  const price = listing.unit_price != null ? Number(listing.unit_price) : null;
+  const qty = Number(listing.qty_available);
+
+  return (
+    <div className="surface-card flex flex-col p-4 transition-shadow hover:shadow-md">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-foreground">
+            {product?.name ?? (variant?.name || "Product")}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {variant?.name ?? `Variant #${listing.variant}`}
+          </p>
         </div>
-        {isOwner && (
-          <div className="absolute left-2 top-2">
-            <Badge className="bg-background/90 text-foreground" variant="outline">
-              Your listing
-            </Badge>
-          </div>
-        )}
+        <ListingStatusBadge status={listing.status} />
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <p className="text-base font-semibold text-foreground">{product?.name ?? "Product"}</p>
-        <p className="text-sm text-muted-foreground">{formatQuantity(listing.quantity, listing.unit)} available</p>
-        <p className="mt-2 text-lg font-semibold text-foreground">
-          {listing.unitPrice ? (
-            <>
-              {formatRwf(listing.unitPrice)}
-              <span className="text-sm font-normal text-muted-foreground">/{listing.unit}</span>
-            </>
-          ) : (
-            <span className="text-base font-medium text-muted-foreground">Negotiable</span>
-          )}
-          {listing.negotiable && listing.unitPrice && (
-            <span className="ml-1.5 text-xs font-normal text-muted-foreground">(negotiable)</span>
-          )}
-        </p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
+        {qty.toLocaleString("en-US")}{" "}
+        <span className="text-sm font-normal text-muted-foreground">{uom?.name}</span>
+      </p>
 
-        <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="truncate">{locationLabel(listing.locationId)}</span>
-          <span className="shrink-0">{listing.listingScope === "peer" ? "Peer-to-peer" : "Commercial"}</span>
-        </div>
-
-        <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
-          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{seller?.name ?? "—"}</span>
-          <ReliabilityBadge score={seller?.reliabilityScore ?? 0} />
-        </div>
-
-        <div className="mt-4 flex-1" />
-
-        {isOwner ? (
-          <Button asChild variant="outline" className="mt-2 w-full">
-            <Link to="/listings/$listingId" params={{ listingId: listing.id }}>
-              Manage listing
-            </Link>
-          </Button>
-        ) : canBuy ? (
-          listing.negotiable ? (
-            <Button asChild className="mt-2 w-full">
-              <Link to="/listings/$listingId" params={{ listingId: listing.id }}>
-                Make an offer
-              </Link>
-            </Button>
-          ) : (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="flex items-center rounded-md border border-input">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="size-8"
-                  onClick={() => setQty(String(Math.max(1, Number(qty) - 1)))}
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="size-3.5" />
-                </Button>
-                <Input
-                  value={qty}
-                  onChange={(e) => setQty(e.target.value)}
-                  className="h-8 w-14 border-0 text-center shadow-none focus-visible:ring-0"
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="size-8"
-                  onClick={() => setQty(String(Math.min(maxQty, Number(qty) + 1)))}
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="size-3.5" />
-                </Button>
-              </div>
-              <Button
-                className="flex-1"
-                onClick={() => {
-                  const n = Number(qty);
-                  if (n > 0 && n <= maxQty) addToCart("produce", listing.id, n);
-                }}
-              >
-                <ShoppingCart className="size-4" /> Add to cart
-              </Button>
-            </div>
-          )
+      <p className="mt-1 text-lg font-semibold text-foreground">
+        {price != null ? (
+          <>
+            RWF {price.toLocaleString("en-US")}
+            <span className="text-sm font-normal text-muted-foreground">
+              /{uom?.name ?? "unit"}
+            </span>
+          </>
         ) : (
-          <Button asChild variant="outline" className="mt-2 w-full">
-            <Link to="/listings/$listingId" params={{ listingId: listing.id }}>
-              View details
-            </Link>
-          </Button>
+          <span className="text-base font-medium text-muted-foreground">Negotiable</span>
         )}
+        {listing.negotiable && price != null && (
+          <span className="ml-1.5 text-xs font-normal text-muted-foreground">(negotiable)</span>
+        )}
+      </p>
+
+      <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span className="truncate">{locationName}</span>
+        <span className="shrink-0">{listing.scope === "peer" ? "Peer-to-peer" : "Commercial"}</span>
       </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
+        <span className="truncate">
+          {listing.seller_user != null
+            ? `User #${listing.seller_user}`
+            : `Org #${listing.seller_org}`}
+        </span>
+        <span className="shrink-0">Harvested {listing.harvest_date}</span>
+      </div>
+
+      <Button asChild variant="outline" className="mt-4 w-full">
+        <Link to="/listings/$listingId" params={{ listingId: String(listing.id) }}>
+          View details
+        </Link>
+      </Button>
     </div>
   );
 }
@@ -188,216 +140,236 @@ function ListingCard({ listing }: { listing: ProduceListing }) {
 function ListingsPage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { product: productParam, district: districtParam } = Route.useSearch();
-  const { produceListings } = useWorkspace();
 
-  const [search, setSearch] = useState("");
-  const [productFilter, setProductFilter] = useState(productParam ?? "all");
-  const [districtFilter, setDistrictFilter] = useState(districtParam ?? "all");
+  const [search, setSearch] = useState(productParam ?? "");
   const [statusFilter, setStatusFilter] = useState("all");
   const [scopeFilter, setScopeFilter] = useState("all");
-  const [page, setPage] = useState(1);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
   // All hooks must run unconditionally on every render — this component stays
-  // mounted across the /listings <-> /listings/new <-> /listings/$id
+  // mounted across the /listings <-> /listings/new <-> /listings/$listingId
   // transition (handled below via the pathname check), so anything hook-like
   // has to sit above that check, not after it.
+  const listingsList = useApiList(
+    () =>
+      listListingsApi({
+        page_size: 100,
+        ...(statusFilter !== "all" ? { status: statusFilter as ListingStatus } : {}),
+        ...(scopeFilter !== "all" ? { scope: scopeFilter as "peer" | "commercial" } : {}),
+      }),
+    [statusFilter, scopeFilter],
+  );
+
+  const productsList = useApiList(() => listProductsApi({ is_active: true, page_size: 100 }), []);
+  const variantsList = useApiList(() => listVariantsApi({ is_active: true, page_size: 300 }), []);
+  const uomsList = useApiList(() => listUomsApi({ page_size: 100 }), []);
+  const locationsList = useApiList(() => listLocationsApi({ page_size: 300 }), []);
+
+  const productById = useMemo(
+    () => new Map(productsList.items.map((p) => [p.id, p] as const)),
+    [productsList.items],
+  );
+  const variantById = useMemo(
+    () => new Map(variantsList.items.map((v) => [v.id, v] as const)),
+    [variantsList.items],
+  );
+  const uomById = useMemo(
+    () => new Map(uomsList.items.map((u) => [u.id, u] as const)),
+    [uomsList.items],
+  );
+  const locationById = useMemo(
+    () => new Map(locationsList.items.map((l) => [l.id, l.name] as const)),
+    [locationsList.items],
+  );
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return produceListings.filter((l) => {
-      if (productFilter !== "all" && l.productId !== productFilter) return false;
-      if (districtFilter !== "all" && districtOf(l.locationId)?.id !== districtFilter) return false;
-      if (statusFilter !== "all" && l.status !== statusFilter) return false;
-      if (scopeFilter !== "all" && l.listingScope !== scopeFilter) return false;
-      if (term && !(productById(l.productId)?.name ?? "").toLowerCase().includes(term)) return false;
+    const min = parseFloat(minPrice);
+    const max = parseFloat(maxPrice);
+    return listingsList.items.filter((l) => {
+      if (term) {
+        const productName =
+          productById.get(l.variant)?.name ?? variantById.get(l.variant)?.name ?? "";
+        const haystack = `${productName} ${l.grade}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      if (!Number.isNaN(min) && (l.unit_price == null || Number(l.unit_price) < min)) return false;
+      if (!Number.isNaN(max) && (l.unit_price == null || Number(l.unit_price) > max)) return false;
       return true;
     });
-  }, [produceListings, search, productFilter, districtFilter, statusFilter, scopeFilter]);
+  }, [listingsList.items, search, minPrice, maxPrice, productById, variantById]);
+
+  const hasRealSession = Boolean(getStoredApiUser() && getTokens());
 
   if (pathname !== "/listings") {
     return <Outlet />;
   }
 
-  // A deep link can name a product+district combination with no listings yet
-  // (e.g. from the market-prices page, which has price data for every
-  // district). Rather than land on a dead, empty grid, drop the district
-  // filter and say so.
-  const comboHasListings =
-    !productParam || !districtParam
-      ? true
-      : produceListings.some((l) => l.productId === productParam && districtOf(l.locationId)?.id === districtParam);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const hasActiveFilters =
-    search.trim() !== "" || productFilter !== "all" || districtFilter !== "all" || statusFilter !== "all" || scopeFilter !== "all";
+    search.trim() !== "" ||
+    statusFilter !== "all" ||
+    scopeFilter !== "all" ||
+    minPrice.trim() !== "" ||
+    maxPrice.trim() !== "";
+
+  const isBusy = listingsList.loading && listingsList.items.length === 0;
 
   function clearFilters() {
     setSearch("");
-    setProductFilter("all");
-    setDistrictFilter("all");
     setStatusFilter("all");
     setScopeFilter("all");
-    setPage(1);
+    setMinPrice("");
+    setMaxPrice("");
   }
 
   return (
     <AppShell
-      title="Produce listings"
-      description="Every farmer offer currently on the marketplace — add what you need to your cart."
+      title="Marketplace"
+      description="Every farmer offer currently on the live AgriBridge API — browse produce and inputs."
     >
+      {districtParam && (
+        <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-warning-foreground">
+          The live listings API doesn't filter by district — district filtering isn't applied here.
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={Sprout}
           title="Available"
-          value={produceListings.filter((l) => l.status === "available").length}
+          value={filtered.filter((l) => l.status === "available").length}
           tone="brand"
         />
         <StatCard
-          icon={Clock}
+          icon={Clock3}
           title="Reserved"
-          value={produceListings.filter((l) => l.status === "reserved").length}
+          value={filtered.filter((l) => l.status === "reserved").length}
           tone="warning"
         />
         <StatCard
           icon={CheckCircle2}
           title="Sold"
-          value={produceListings.filter((l) => l.status === "sold").length}
+          value={filtered.filter((l) => l.status === "sold").length}
           tone="success"
         />
         <StatCard
           icon={XCircle}
           title="Expired"
-          value={produceListings.filter((l) => l.status === "expired").length}
+          value={filtered.filter((l) => l.status === "expired").length}
           tone="soft"
         />
       </div>
 
-      {!comboHasListings && (
-        <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-warning-foreground">
-          No {productById(productParam)?.name ?? "matching"} listings in{" "}
-          {DISTRICTS.find((d) => d.id === districtParam)?.name ?? "that district"} right now — showing all
-          districts instead.
-        </div>
-      )}
-
       <div className="surface-card p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[14rem] flex-1">
+          <div className="relative min-w-[13rem] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search by product…"
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by product or grade…"
               className="pl-9"
             />
           </div>
-          <Select
-            value={productFilter}
-            onValueChange={(v) => {
-              setProductFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-44"><SelectValue placeholder="All products" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All products</SelectItem>
-              {produceProducts.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={districtFilter}
-            onValueChange={(v) => {
-              setDistrictFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-44"><SelectValue placeholder="All districts" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All districts</SelectItem>
-              {DISTRICTS.map((d) => (
-                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => {
-              setStatusFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-40"><SelectValue placeholder="All status" /></SelectTrigger>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="All status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All status</SelectItem>
-              {Object.entries(LISTING_STATUS_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value as ListingStatus}>{label}</SelectItem>
+              {Object.entries(LISTING_STATUS_META).map(([value, meta]) => (
+                <SelectItem key={value} value={value}>
+                  {meta.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={scopeFilter}
-            onValueChange={(v) => {
-              setScopeFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-40"><SelectValue placeholder="All scope" /></SelectTrigger>
+          <Select value={scopeFilter} onValueChange={setScopeFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="All scope" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All scope</SelectItem>
               <SelectItem value="commercial">Commercial</SelectItem>
               <SelectItem value="peer">Peer-to-peer</SelectItem>
             </SelectContent>
           </Select>
+          <Input
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            type="number"
+            min={0}
+            placeholder="Min price"
+            className="w-28"
+          />
+          <Input
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            type="number"
+            min={0}
+            placeholder="Max price"
+            className="w-28"
+          />
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
               Clear
             </Button>
           )}
+          {hasRealSession && (
+            <Button asChild size="sm">
+              <Link to="/listings/new">
+                <Plus className="size-4" /> Add listing
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
-      {pageItems.length === 0 ? (
+      {listingsList.error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {listingsList.error}
+        </div>
+      )}
+
+      {isBusy ? (
+        <div className="surface-card flex items-center gap-2 p-12 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" /> Loading live listings…
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="surface-card p-12 text-center text-sm text-muted-foreground">
           No listings match your filters.
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {pageItems.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+          {filtered.map((listing) => (
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              product={productById.get(listing.variant)}
+              variant={variantById.get(listing.variant)}
+              uom={uomById.get(listing.uom)}
+              locationName={locationById.get(listing.location) ?? `Location #${listing.location}`}
+            />
           ))}
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages} · {filtered.length} listings
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft className="size-4" /> Previous
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Next <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {filtered.length} live listing{filtered.length === 1 ? "" : "s"} loaded
+        </p>
+        {listingsList.hasMore && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void listingsList.loadMore()}
+            disabled={listingsList.loading}
+          >
+            <Plus className="size-4" /> Load more
+          </Button>
+        )}
+      </div>
     </AppShell>
   );
 }

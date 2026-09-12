@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AggregationRouteImport } from './routes/aggregation'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CatalogDataRouteImport } from './routes/catalog-data'
+import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CommerceDataRouteImport } from './routes/commerce-data'
 import { Route as CooperativesRouteImport } from './routes/cooperatives'
@@ -44,6 +45,7 @@ import { Route as InputsInputIdRouteImport } from './routes/inputs.$inputId'
 import { Route as InputsNewRouteImport } from './routes/inputs.new'
 import { Route as ListingsListingIdRouteImport } from './routes/listings.$listingId'
 import { Route as ListingsNewRouteImport } from './routes/listings.new'
+import { Route as ProductsProductIdRouteImport } from './routes/products.$productId'
 import { Route as RequestsRequestIdRouteImport } from './routes/requests.$requestId'
 import { Route as RequestsNewRouteImport } from './routes/requests.new'
 import { Route as TransactionsTransactionIdRouteImport } from './routes/transactions.$transactionId'
@@ -67,6 +69,11 @@ const CartRoute = CartRouteImport.update({
 const CatalogDataRoute = CatalogDataRouteImport.update({
   id: '/catalog-data',
   path: '/catalog-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategoriesRoute = CategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -226,6 +233,11 @@ const ListingsNewRoute = ListingsNewRouteImport.update({
   path: '/new',
   getParentRoute: () => ListingsRoute,
 } as any)
+const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
+  id: '/$productId',
+  path: '/$productId',
+  getParentRoute: () => ProductsRoute,
+} as any)
 const RequestsRequestIdRoute = RequestsRequestIdRouteImport.update({
   id: '/$requestId',
   path: '/$requestId',
@@ -253,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
   '/catalog-data': typeof CatalogDataRoute
+  '/categories': typeof CategoriesRoute
   '/checkout': typeof CheckoutRoute
   '/commerce-data': typeof CommerceDataRoute
   '/cooperatives': typeof CooperativesRouteWithChildren
@@ -266,7 +279,7 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
   '/orders': typeof OrdersRoute
-  '/products': typeof ProductsRoute
+  '/products': typeof ProductsRouteWithChildren
   '/reference-data': typeof ReferenceDataRoute
   '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
@@ -284,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/inputs/new': typeof InputsNewRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
   '/listings/new': typeof ListingsNewRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/requests/$requestId': typeof RequestsRequestIdRoute
   '/requests/new': typeof RequestsNewRoute
   '/transactions/$transactionId': typeof TransactionsTransactionIdRoute
@@ -294,6 +308,7 @@ export interface FileRoutesByTo {
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
   '/catalog-data': typeof CatalogDataRoute
+  '/categories': typeof CategoriesRoute
   '/checkout': typeof CheckoutRoute
   '/commerce-data': typeof CommerceDataRoute
   '/cooperatives': typeof CooperativesRouteWithChildren
@@ -307,7 +322,7 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
   '/orders': typeof OrdersRoute
-  '/products': typeof ProductsRoute
+  '/products': typeof ProductsRouteWithChildren
   '/reference-data': typeof ReferenceDataRoute
   '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
@@ -325,6 +340,7 @@ export interface FileRoutesByTo {
   '/inputs/new': typeof InputsNewRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
   '/listings/new': typeof ListingsNewRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/requests/$requestId': typeof RequestsRequestIdRoute
   '/requests/new': typeof RequestsNewRoute
   '/transactions/$transactionId': typeof TransactionsTransactionIdRoute
@@ -336,6 +352,7 @@ export interface FileRoutesById {
   '/aggregation': typeof AggregationRouteWithChildren
   '/cart': typeof CartRoute
   '/catalog-data': typeof CatalogDataRoute
+  '/categories': typeof CategoriesRoute
   '/checkout': typeof CheckoutRoute
   '/commerce-data': typeof CommerceDataRoute
   '/cooperatives': typeof CooperativesRouteWithChildren
@@ -349,7 +366,7 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRoute
   '/my-listings': typeof MyListingsRoute
   '/orders': typeof OrdersRoute
-  '/products': typeof ProductsRoute
+  '/products': typeof ProductsRouteWithChildren
   '/reference-data': typeof ReferenceDataRoute
   '/refunds': typeof RefundsRoute
   '/register': typeof RegisterRoute
@@ -367,6 +384,7 @@ export interface FileRoutesById {
   '/inputs/new': typeof InputsNewRoute
   '/listings/$listingId': typeof ListingsListingIdRoute
   '/listings/new': typeof ListingsNewRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/requests/$requestId': typeof RequestsRequestIdRoute
   '/requests/new': typeof RequestsNewRoute
   '/transactions/$transactionId': typeof TransactionsTransactionIdRoute
@@ -379,6 +397,7 @@ export interface FileRouteTypes {
     | '/aggregation'
     | '/cart'
     | '/catalog-data'
+    | '/categories'
     | '/checkout'
     | '/commerce-data'
     | '/cooperatives'
@@ -410,6 +429,7 @@ export interface FileRouteTypes {
     | '/inputs/new'
     | '/listings/$listingId'
     | '/listings/new'
+    | '/products/$productId'
     | '/requests/$requestId'
     | '/requests/new'
     | '/transactions/$transactionId'
@@ -420,6 +440,7 @@ export interface FileRouteTypes {
     | '/aggregation'
     | '/cart'
     | '/catalog-data'
+    | '/categories'
     | '/checkout'
     | '/commerce-data'
     | '/cooperatives'
@@ -451,6 +472,7 @@ export interface FileRouteTypes {
     | '/inputs/new'
     | '/listings/$listingId'
     | '/listings/new'
+    | '/products/$productId'
     | '/requests/$requestId'
     | '/requests/new'
     | '/transactions/$transactionId'
@@ -461,6 +483,7 @@ export interface FileRouteTypes {
     | '/aggregation'
     | '/cart'
     | '/catalog-data'
+    | '/categories'
     | '/checkout'
     | '/commerce-data'
     | '/cooperatives'
@@ -492,6 +515,7 @@ export interface FileRouteTypes {
     | '/inputs/new'
     | '/listings/$listingId'
     | '/listings/new'
+    | '/products/$productId'
     | '/requests/$requestId'
     | '/requests/new'
     | '/transactions/$transactionId'
@@ -503,6 +527,7 @@ export interface RootRouteChildren {
   AggregationRoute: typeof AggregationRouteWithChildren
   CartRoute: typeof CartRoute
   CatalogDataRoute: typeof CatalogDataRoute
+  CategoriesRoute: typeof CategoriesRoute
   CheckoutRoute: typeof CheckoutRoute
   CommerceDataRoute: typeof CommerceDataRoute
   CooperativesRoute: typeof CooperativesRouteWithChildren
@@ -516,7 +541,7 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRoute
   MyListingsRoute: typeof MyListingsRoute
   OrdersRoute: typeof OrdersRoute
-  ProductsRoute: typeof ProductsRoute
+  ProductsRoute: typeof ProductsRouteWithChildren
   ReferenceDataRoute: typeof ReferenceDataRoute
   RefundsRoute: typeof RefundsRoute
   RegisterRoute: typeof RegisterRoute
@@ -557,6 +582,13 @@ declare module '@tanstack/react-router' {
       path: '/catalog-data'
       fullPath: '/catalog-data'
       preLoaderRoute: typeof CatalogDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categories': {
+      id: '/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof CategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -776,6 +808,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsNewRouteImport
       parentRoute: typeof ListingsRoute
     }
+    '/products/$productId': {
+      id: '/products/$productId'
+      path: '/$productId'
+      fullPath: '/products/$productId'
+      preLoaderRoute: typeof ProductsProductIdRouteImport
+      parentRoute: typeof ProductsRoute
+    }
     '/requests/$requestId': {
       id: '/requests/$requestId'
       path: '/$requestId'
@@ -870,6 +909,18 @@ const ListingsRouteWithChildren = ListingsRoute._addFileChildren(
   ListingsRouteChildren,
 )
 
+interface ProductsRouteChildren {
+  ProductsProductIdRoute: typeof ProductsProductIdRoute
+}
+
+const ProductsRouteChildren: ProductsRouteChildren = {
+  ProductsProductIdRoute: ProductsProductIdRoute,
+}
+
+const ProductsRouteWithChildren = ProductsRoute._addFileChildren(
+  ProductsRouteChildren,
+)
+
 interface RequestsRouteChildren {
   RequestsRequestIdRoute: typeof RequestsRequestIdRoute
   RequestsNewRoute: typeof RequestsNewRoute
@@ -911,6 +962,7 @@ const rootRouteChildren: RootRouteChildren = {
   AggregationRoute: AggregationRouteWithChildren,
   CartRoute: CartRoute,
   CatalogDataRoute: CatalogDataRoute,
+  CategoriesRoute: CategoriesRoute,
   CheckoutRoute: CheckoutRoute,
   CommerceDataRoute: CommerceDataRoute,
   CooperativesRoute: CooperativesRouteWithChildren,
@@ -924,7 +976,7 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRoute,
   MyListingsRoute: MyListingsRoute,
   OrdersRoute: OrdersRoute,
-  ProductsRoute: ProductsRoute,
+  ProductsRoute: ProductsRouteWithChildren,
   ReferenceDataRoute: ReferenceDataRoute,
   RefundsRoute: RefundsRoute,
   RegisterRoute: RegisterRoute,

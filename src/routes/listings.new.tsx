@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -6,14 +6,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { getStoredApiUser } from "@/lib/api/auth";
-import { apiErrorMessage, apiFieldErrors, ApiError, getTokens, resolveMediaUrl } from "@/lib/api/client";
+import {
+  apiErrorMessage,
+  apiFieldErrors,
+  ApiError,
+  getTokens,
+  resolveMediaUrl,
+} from "@/lib/api/client";
 import { listLocationsApi } from "@/lib/api/reference";
 import { listProductsApi, listVariantsApi } from "@/lib/api/products";
 import { listUomsApi } from "@/lib/api/reference";
-import { createListingApi, createListingPhotoApi, type ListingCreatePayload } from "@/lib/api/listings";
+import { listOrganizationsApi } from "@/lib/api/organizations";
+import { listUsersApi } from "@/lib/api/users";
+import {
+  createListingApi,
+  createListingPhotoApi,
+  type ListingCreatePayload,
+} from "@/lib/api/listings";
 import { useApiList } from "@/hooks/use-api-list";
 import type { ApiListing, ApiListingPhoto, ListingScope } from "@/lib/api/types";
 
@@ -33,16 +51,42 @@ async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
 function NewListingPage() {
   const apiUser = getStoredApiUser();
   const hasRealSession = Boolean(apiUser && getTokens());
+  const isStaff = apiUser?.roles === "superadmin";
 
-  const productsList = useApiList(() => listProductsApi({ prod_type: "produce", is_active: true, page_size: 100 }), []);
+  const productsList = useApiList(() => listProductsApi({ is_active: true, page_size: 100 }), []);
+  useEffect(() => {
+    if (productsList.hasMore) void productsList.loadMore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productsList.hasMore]);
   const uomsList = useApiList(() => listUomsApi({ page_size: 100 }), []);
   const locationsList = useApiList(() => listLocationsApi({ page_size: 100 }), []);
+  const staffUsersList = useApiList(
+    () =>
+      isStaff
+        ? listUsersApi({ page_size: 200 })
+        : Promise.resolve({ next: null, previous: null, results: [] as never[] }),
+    [isStaff],
+  );
+  const staffOrgsList = useApiList(
+    () =>
+      isStaff
+        ? listOrganizationsApi({ page_size: 100 })
+        : Promise.resolve({ next: null, previous: null, results: [] as never[] }),
+    [isStaff],
+  );
 
   const [productId, setProductId] = useState("");
   const variantsList = useApiList(
-    () => listVariantsApi({ ...(productId ? { product: Number(productId) } : {}), is_active: true, page_size: 100 }),
+    () =>
+      productId
+        ? listVariantsApi({ product: Number(productId), is_active: true, page_size: 100 })
+        : Promise.resolve({ next: null, previous: null, results: [] as never[] }),
     [productId],
   );
+  useEffect(() => {
+    if (variantsList.hasMore) void variantsList.loadMore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variantsList.hasMore]);
 
   const [variantId, setVariantId] = useState("");
   const [qtyAvailable, setQtyAvailable] = useState("");
@@ -53,6 +97,9 @@ function NewListingPage() {
   const [harvestDate, setHarvestDate] = useState(new Date().toISOString().slice(0, 10));
   const [grade, setGrade] = useState("");
   const [scope, setScope] = useState<ListingScope>("commercial");
+  const [sellerMode, setSellerMode] = useState<"me" | "user" | "org">("me");
+  const [sellerUserId, setSellerUserId] = useState("");
+  const [sellerOrgId, setSellerOrgId] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -74,6 +121,9 @@ function NewListingPage() {
     setHarvestDate(new Date().toISOString().slice(0, 10));
     setGrade("");
     setScope("commercial");
+    setSellerMode("me");
+    setSellerUserId("");
+    setSellerOrgId("");
     setPhotos([]);
     setFormError("");
     setFieldErrors({});
@@ -85,13 +135,27 @@ function NewListingPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!apiUser) return;
-    if (!variantId || !qtyAvailable.trim() || !uomId || !locationId || !harvestDate) return;
+    const nextErrors: Record<string, string> = {};
+    if (!variantId) nextErrors["variant"] = "Pick a product variant.";
+    if (!qtyAvailable.trim()) nextErrors["qty_available"] = "Enter the quantity available.";
+    if (!uomId) nextErrors["uom"] = "Pick a unit of measure.";
+    if (!locationId) nextErrors["location"] = "Pick a location.";
+    if (!harvestDate) nextErrors["harvest_date"] = "Enter the harvest date.";
+    if (sellerMode === "user" && !sellerUserId) nextErrors["seller_user"] = "Pick the seller user.";
+    if (sellerMode === "org" && !sellerOrgId)
+      nextErrors["seller_org"] = "Pick the seller organization.";
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     setBusy(true);
     setFormError("");
     setFieldErrors({});
     setPhotoWarning("");
     const payload: ListingCreatePayload = {
-      seller_user: apiUser.id,
+      ...(sellerMode === "org" && sellerOrgId
+        ? { seller_org: Number(sellerOrgId) }
+        : sellerMode === "user" && sellerUserId
+          ? { seller_user: Number(sellerUserId) }
+          : { seller_user: apiUser.id }),
       variant: Number(variantId),
       qty_available: qtyAvailable.trim(),
       uom: Number(uomId),
@@ -112,7 +176,10 @@ function NewListingPage() {
         const succeeded: UploadedPhoto[] = [];
         for (let i = 0; i < photos.length; i++) {
           try {
-            const file = await dataUrlToFile(photos[i] as string, `listing-${listing.id}-photo-${i + 1}.jpg`);
+            const file = await dataUrlToFile(
+              photos[i] as string,
+              `listing-${listing.id}-photo-${i + 1}.jpg`,
+            );
             const uploaded = await createListingPhotoApi({ listing: listing.id, photo: file });
             succeeded.push(uploaded);
           } catch {
@@ -137,13 +204,17 @@ function NewListingPage() {
 
   if (!hasRealSession) {
     return (
-      <AppShell title="New produce listing" description="List your harvest on the live marketplace.">
+      <AppShell
+        title="New produce listing"
+        description="List your harvest on the live marketplace."
+      >
         <div className="surface-card mx-auto max-w-md space-y-3 p-6 text-center">
           <AlertTriangle className="mx-auto size-8 text-amber-500" />
           <h2 className="text-sm font-semibold text-foreground">Sign in with a real account</h2>
           <p className="text-sm text-muted-foreground">
-            Creating a live listing writes to the real AgriBridge API, so it needs a real signed-in account — not
-            the mock demo-account switcher. Sign in (or register) with a real phone number and password first.
+            Creating a live listing writes to the real AgriBridge API, so it needs a real signed-in
+            account — not the mock demo-account switcher. Sign in (or register) with a real phone
+            number and password first.
           </p>
           <Button asChild>
             <Link to="/login">Go to sign in</Link>
@@ -155,7 +226,10 @@ function NewListingPage() {
 
   if (created) {
     return (
-      <AppShell title="New produce listing" description="List your harvest on the live marketplace.">
+      <AppShell
+        title="New produce listing"
+        description="List your harvest on the live marketplace."
+      >
         <div className="surface-card mx-auto max-w-lg space-y-4 p-6">
           <div className="flex items-center gap-2 text-emerald-600">
             <CheckCircle2 className="size-6" />
@@ -206,8 +280,8 @@ function NewListingPage() {
           )}
 
           <p className="text-xs text-muted-foreground">
-            This was saved to the live AgriBridge API. There's no public "browse real listings" page yet — this
-            confirmation is the only place it's shown right now.
+            This was saved to the live AgriBridge API. There's no public "browse real listings" page
+            yet — this confirmation is the only place it's shown right now.
           </p>
           <div className="flex gap-2">
             <Button onClick={resetForm}>List another</Button>
@@ -221,7 +295,10 @@ function NewListingPage() {
   const noLocations = !locationsList.loading && locationsList.items.length === 0;
 
   return (
-    <AppShell title="New produce listing" description="List your harvest on the live AgriBridge marketplace.">
+    <AppShell
+      title="New produce listing"
+      description="List your harvest on the live AgriBridge marketplace."
+    >
       {(noProducts || noLocations) && (
         <div className="surface-card mb-6 flex items-start gap-3 border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -254,6 +331,78 @@ function NewListingPage() {
             </div>
           )}
 
+          {isStaff && (
+            <div className="space-y-3 rounded-lg border border-border p-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">Selling as</p>
+                <p className="text-xs text-muted-foreground">
+                  Staff can publish listings on behalf of any user or organization.
+                </p>
+              </div>
+              <Select
+                value={sellerMode}
+                onValueChange={(v) => setSellerMode(v as "me" | "user" | "org")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="me">Myself (User #{apiUser?.id})</SelectItem>
+                  <SelectItem value="user">A specific user</SelectItem>
+                  <SelectItem value="org">An organization</SelectItem>
+                </SelectContent>
+              </Select>
+              {sellerMode === "user" && (
+                <div className="grid gap-2">
+                  <Label>Seller user</Label>
+                  <Select value={sellerUserId} onValueChange={setSellerUserId}>
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={staffUsersList.items.length ? "Select user" : "No users found"}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffUsersList.items.map((u) => (
+                        <SelectItem key={u.id} value={String(u.id)}>
+                          {u.full_name} · #{u.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldErrors["seller_user"] && (
+                    <p className="text-xs text-destructive">{fieldErrors["seller_user"]}</p>
+                  )}
+                </div>
+              )}
+              {sellerMode === "org" && (
+                <div className="grid gap-2">
+                  <Label>Seller organization</Label>
+                  <Select value={sellerOrgId} onValueChange={setSellerOrgId}>
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          staffOrgsList.items.length
+                            ? "Select organization"
+                            : "No organizations found"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffOrgsList.items.map((o) => (
+                        <SelectItem key={o.id} value={String(o.id)}>
+                          {o.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldErrors["seller_org"] && (
+                    <p className="text-xs text-destructive">{fieldErrors["seller_org"]}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-2">
             <Label>Product</Label>
             <Select
@@ -264,7 +413,9 @@ function NewListingPage() {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder={productsList.items.length ? "Select a product" : "No products yet"} />
+                <SelectValue
+                  placeholder={productsList.items.length ? "Select a product" : "No products yet"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {productsList.items.map((p) => (
@@ -283,7 +434,11 @@ function NewListingPage() {
                 <SelectTrigger>
                   <SelectValue
                     placeholder={
-                      !productId ? "Pick a product first" : variantsList.items.length ? "Select a variant" : "No variants yet"
+                      !productId
+                        ? "Pick a product first"
+                        : variantsList.items.length
+                          ? "Select a variant"
+                          : "No variants yet"
                     }
                   />
                 </SelectTrigger>
@@ -295,7 +450,9 @@ function NewListingPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {fieldErrors["variant"] && <p className="text-xs text-destructive">{fieldErrors["variant"]}</p>}
+              {fieldErrors["variant"] && (
+                <p className="text-xs text-destructive">{fieldErrors["variant"]}</p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label>Unit of measure</Label>
@@ -311,7 +468,9 @@ function NewListingPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {fieldErrors["uom"] && <p className="text-xs text-destructive">{fieldErrors["uom"]}</p>}
+              {fieldErrors["uom"] && (
+                <p className="text-xs text-destructive">{fieldErrors["uom"]}</p>
+              )}
             </div>
           </div>
 
@@ -335,7 +494,9 @@ function NewListingPage() {
               <Label>Location</Label>
               <Select value={locationId} onValueChange={setLocationId}>
                 <SelectTrigger>
-                  <SelectValue placeholder={locationsList.items.length ? "Select a location" : "None yet"} />
+                  <SelectValue
+                    placeholder={locationsList.items.length ? "Select a location" : "None yet"}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {locationsList.items.map((l) => (
@@ -345,7 +506,9 @@ function NewListingPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {fieldErrors["location"] && <p className="text-xs text-destructive">{fieldErrors["location"]}</p>}
+              {fieldErrors["location"] && (
+                <p className="text-xs text-destructive">{fieldErrors["location"]}</p>
+              )}
             </div>
           </div>
 
@@ -384,7 +547,12 @@ function NewListingPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="grade">Quality grade (optional)</Label>
-              <Input id="grade" placeholder="Grade A" value={grade} onChange={(e) => setGrade(e.target.value)} />
+              <Input
+                id="grade"
+                placeholder="Grade A"
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+              />
             </div>
           </div>
 
@@ -419,9 +587,24 @@ function NewListingPage() {
 
         <div className="space-y-6">
           <section className="surface-card p-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
-            <p className="mt-1 text-lg font-semibold text-foreground">{selectedProduct?.name ?? "Product"}</p>
-            <p className="text-sm text-muted-foreground">Listed by {apiUser?.full_name}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Preview
+            </p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              {selectedProduct?.name ?? "Product"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Listed by{" "}
+              {!apiUser
+                ? "—"
+                : sellerMode === "org"
+                  ? (staffOrgsList.items.find((o) => String(o.id) === sellerOrgId)?.name ??
+                    "Organization")
+                  : sellerMode === "user"
+                    ? (staffUsersList.items.find((u) => String(u.id) === sellerUserId)?.full_name ??
+                      "User")
+                    : apiUser.full_name}
+            </p>
             <dl className="mt-4 space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <dt className="text-muted-foreground">Quantity</dt>

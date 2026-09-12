@@ -4,6 +4,7 @@ import {
   Building2,
   ClipboardList,
   Database,
+  FolderTree,
   Handshake,
   LayoutDashboard,
   LineChart,
@@ -50,35 +51,168 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
-  { title: "Messages", url: "/messages", icon: MessageSquare, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
-  { title: "Settings", url: "/settings", icon: Settings, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Workspace" },
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboard,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Workspace",
+  },
+  {
+    title: "Messages",
+    url: "/messages",
+    icon: MessageSquare,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Workspace",
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Workspace",
+  },
 
-  { title: "My listings", url: "/my-listings", icon: Warehouse, roles: ["farmer"], group: "Marketplace" },
-  { title: "Products", url: "/products", icon: Tag, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
-  { title: "Produce listings", url: "/listings", icon: Sprout, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
-  { title: "Buyer requests", url: "/requests", icon: ShoppingBasket, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
-  { title: "Aggregation groups", url: "/aggregation", icon: Handshake, roles: ["farmer", "buyer", "admin"], group: "Marketplace" },
-  { title: "Input marketplace", url: "/inputs", icon: Package, roles: ["farmer", "supplier", "admin"], group: "Marketplace" },
-  { title: "Group purchases", url: "/group-purchases", icon: Boxes, roles: ["farmer", "supplier", "admin"], group: "Marketplace" },
-  { title: "Orders", url: "/orders", icon: PackageCheck, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
-  { title: "Transactions", url: "/transactions", icon: ShoppingCart, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
-  { title: "Refunds", url: "/refunds", icon: RotateCcw, roles: ["farmer", "buyer", "supplier", "admin"], group: "Marketplace" },
-  { title: "Market prices", url: "/market-prices", icon: LineChart, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Marketplace" },
-  { title: "Transport pooling", url: "/transport-pool", icon: Truck, roles: ["transporter", "admin"], group: "Marketplace" },
+  {
+    title: "My listings",
+    url: "/my-listings",
+    icon: Warehouse,
+    roles: ["farmer"],
+    group: "Marketplace",
+  },
+  {
+    title: "Products",
+    url: "/products",
+    icon: Tag,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Produce listings",
+    url: "/listings",
+    icon: Sprout,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Buyer requests",
+    url: "/requests",
+    icon: ShoppingBasket,
+    roles: ["farmer", "buyer", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Aggregation groups",
+    url: "/aggregation",
+    icon: Handshake,
+    roles: ["farmer", "buyer", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Input marketplace",
+    url: "/inputs",
+    icon: Package,
+    roles: ["farmer", "supplier", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Group purchases",
+    url: "/group-purchases",
+    icon: Boxes,
+    roles: ["farmer", "supplier", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Orders",
+    url: "/orders",
+    icon: PackageCheck,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Transactions",
+    url: "/transactions",
+    icon: ShoppingCart,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Refunds",
+    url: "/refunds",
+    icon: RotateCcw,
+    roles: ["farmer", "buyer", "supplier", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Market prices",
+    url: "/market-prices",
+    icon: LineChart,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Marketplace",
+  },
+  {
+    title: "Transport pooling",
+    url: "/transport-pool",
+    icon: Truck,
+    roles: ["transporter", "admin"],
+    group: "Marketplace",
+  },
 
   { title: "Users", url: "/users", icon: Users, roles: ["admin"], group: "Management" },
-  { title: "Cooperatives", url: "/cooperatives", icon: Building2, roles: ["admin"], group: "Management" },
+  {
+    title: "Cooperatives",
+    url: "/cooperatives",
+    icon: Building2,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Management",
+  },
   { title: "Audit log", url: "/logs", icon: ScrollText, roles: ["admin"], group: "Management" },
   // These five talk directly to the real backend, which enforces its own real
   // authorization (public reads, staff-only writes) — gating them behind the
   // mock role system too would be a redundant, wrong-signal wall, since a real
   // account has no `roles` field at all and always defaults to "farmer".
-  { title: "Reference data", url: "/reference-data", icon: Database, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
-  { title: "Catalog (live API)", url: "/catalog-data", icon: ClipboardList, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
-  { title: "Commerce (live API)", url: "/commerce-data", icon: ShoppingBag, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
-  { title: "Transactions (live API)", url: "/transactions-data", icon: Receipt, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
-  { title: "Social (live API)", url: "/social-data", icon: MessageCircle, roles: ["farmer", "buyer", "supplier", "transporter", "admin"], group: "Management" },
+  {
+    title: "Reference data",
+    url: "/reference-data",
+    icon: Database,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Management",
+  },
+  {
+    title: "Categories",
+    url: "/categories",
+    icon: FolderTree,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Management",
+  },
+  {
+    title: "Catalog (live API)",
+    url: "/catalog-data",
+    icon: ClipboardList,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Management",
+  },
+  {
+    title: "Commerce (live API)",
+    url: "/commerce-data",
+    icon: ShoppingBag,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Management",
+  },
+  {
+    title: "Transactions (live API)",
+    url: "/transactions-data",
+    icon: Receipt,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Management",
+  },
+  {
+    title: "Social (live API)",
+    url: "/social-data",
+    icon: MessageCircle,
+    roles: ["farmer", "buyer", "supplier", "transporter", "admin"],
+    group: "Management",
+  },
 ];
 
 export function AppSidebar() {
@@ -99,7 +233,9 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-sidebar-foreground">Agribridge</p>
-              <p className="truncate text-xs text-sidebar-foreground/70">Farmers · Buyers · Suppliers</p>
+              <p className="truncate text-xs text-sidebar-foreground/70">
+                Farmers · Buyers · Suppliers
+              </p>
             </div>
           )}
         </Link>
